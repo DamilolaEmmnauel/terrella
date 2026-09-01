@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>region-globe</title>
+
+<!-- d3-geo needs d3-array at runtime (Adder, for its spherical arithmetic). -->
+<script src="https://cdn.jsdelivr.net/npm/d3-array@3/dist/d3-array.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-geo@3/dist/d3-geo.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
+<link rel="stylesheet" href="../src/globe.css">
+
+<style>
+  :root {
+    --ink: #1f2d3d;
+    --soft: #6b7c8d;
+    --rule: #e4e9ee;
+    --accent: #1769a8;
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink);
+    background: #fbfcfd;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 48px 24px 80px; }
+  header { border-bottom: 1px solid var(--rule); padding-bottom: 22px; margin-bottom: 36px; }
+  h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--soft); max-width: 60ch; }
+
+  .stage { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 40px; align-items: start; }
+  @media (max-width: 780px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+
+  .panel { border: 1px solid var(--rule); border-radius: 10px; padding: 20px; background: #fff; }
+  .panel h2 { margin: 0 0 14px; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--soft); font-weight: 600; }
+
+  .row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .row:last-child { margin-bottom: 0; }
+  label { font-size: 13px; color: var(--soft); }
+  select, input[type="range"] { width: 100%; }
+  button {
+    font: inherit; font-size: 14px; padding: 7px 12px; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 7px; background: #fff; color: var(--ink);
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  .buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .readout { font-size: 13px; color: var(--soft); margin-top: 18px; font-variant-numeric: tabular-nums; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.9em; background: #f1f4f7; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>region-globe</h1>
+    <p>
+      An interactive globe that highlights groups of countries and puts markers on
+      them. Drag to spin, flick to throw, hover a marker for its local time.
+    </p>
+  </header>
+
+  <div class="stage">
+    <div id="globe" class="region-globe"></div>
+
+    <div class="panel">
+      <h2>Try it</h2>
+
+      <div class="row">
+        <label for="focus">Focus a region</label>
+        <select id="focus">
+          <option value="">All regions, drifting</option>
+          <option value="sea">Southeast Asia</option>
+          <option value="latam">Latin America</option>
+          <option value="africa">Africa</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label for="spin">Ambient spin <span id="spinValue">3.2</span>°/s</label>
+        <input id="spin" type="range" min="0" max="20" step="0.2" value="3.2">
+      </div>
+
+      <div class="row">
+        <label>Palette</label>
+        <div class="buttons">
+          <button data-palette="default">Default</button>
+          <button data-palette="slate">Slate</button>
+          <button data-palette="warm">Warm</button>
+        </div>
+      </div>
+
+      <p class="readout">
+        Longitude <span id="lon">0.00</span>°<br>
+        Hovering <span id="hover">nothing</span>
+      </p>
+    </div>
+  </div>
+
+</div>
+
+<script type="module">
+import { createGlobe } from "../src/globe.js";
+
+const world = await fetch("../data/countries-110m.json").then((r) => r.json());
+
+/**
+ * ISO 3166-1 numeric codes. The demo uses three regions; a real project would
+ * usually generate these lists rather than type them.
+ */
+const REGIONS = [
+  {
+    id: "sea",
+    name: "Southeast Asia",
+    countries: ["608", "360", "704", "764", "458", "104", "116", "418", "096", "626"],
+    highlight: ["608", "360", "704"],
+    markers: ["Manila", "Jakarta", "Ho Chi Minh City"],
+    longitude: 112,
+    tilt: -6,
+  },
+  {
+    id: "latam",
+    name: "Latin America",
+    countries: ["484", "320", "084", "222", "340", "558", "188", "591", "170", "862",
+                "218", "604", "076", "068", "600", "858", "032", "152", "328", "740"],
+    highlight: ["170", "484", "076"],
+    markers: ["Bogotá", "Mexico City", "São Paulo"],
+    longitude: -66,
+    tilt: -4,
+  },
+  {
+    id: "africa",
+    name: "Africa",
+    countries: ["012", "024", "204", "072", "854", "108", "120", "140", "148", "178",
+                "384", "180", "262", "818", "226", "232", "231", "266", "270", "288",
+                "324", "624", "404", "426", "430", "434", "450", "454", "466", "478",
+                "504", "508", "516", "562", "566", "646", "728", "686", "694", "706",
+                "710", "729", "834", "768", "788", "800", "732", "894", "716", "748"],
+    highlight: ["710", "566", "404"],
+    markers: ["Johannesburg", "Lagos", "Nairobi"],
+    longitude: 20,
+    tilt: -2,
+  },
+];
+
+const MARKERS = [
+  { name: "Manila", coords: [121.0, 14.6], timezone: "Asia/Manila" },
+  { name: "Jakarta", coords: [106.85, -6.2], timezone: "Asia/Jakarta" },
+  { name: "Ho Chi Minh City", coords: [106.7, 10.8], timezone: "Asia/Ho_Chi_Minh" },
+  { name: "Bogotá", coords: [-74.1, 4.7], timezone: "America/Bogota" },
+  { name: "Mexico City", coords: [-99.1, 19.4], timezone: "America/Mexico_City" },
+  { name: "São Paulo", coords: [-46.6, -23.55], timezone: "America/Sao_Paulo" },
+  { name: "Johannesburg", coords: [28.0, -26.2], timezone: "Africa/Johannesburg" },
+  { name: "Lagos", coords: [3.38, 6.52], timezone: "Africa/Lagos" },
+  { name: "Nairobi", coords: [36.8, -1.3], timezone: "Africa/Nairobi" },
+];
+
+const PALETTES = {
+  default: {},
+  slate: { ocean: "#eef1f4", land: "#c9d1d9", region: "#9fb3c8", highlight: "#486581", marker: "#243b53" },
+  warm:  { ocean: "#fbf3ec", land: "#e4d5c7", region: "#e0b089", highlight: "#c26b35", marker: "#8a3f14" },
+};
+
+let globe = build("default");
+
+function build(paletteName) {
+  document.querySelector("#globe").innerHTML = "";
+  return createGlobe(document.querySelector("#globe"), {
+    world,
+    regions: REGIONS,
+    markers: MARKERS,
+    palette: PALETTES[paletteName],
+    onMarkerHover: (marker) => {
+      document.querySelector("#hover").textContent = marker ? marker.name : "nothing";
+    },
+  });
+}
+
+document.querySelector("#focus").addEventListener("change", (event) => {
+  globe.focus(event.target.value || null);
+});
+
+document.querySelector("#spin").addEventListener("input", (event) => {
+  const value = Number(event.target.value);
+  document.querySelector("#spinValue").textContent = value.toFixed(1);
+  globe.setSpin(value);
+});
+
+for (const button of document.querySelectorAll("[data-palette]")) {
+  button.addEventListener("click", () => {
+    const spin = Number(document.querySelector("#spin").value);
+    globe.destroy();
+    globe = build(button.dataset.palette);
+    globe.setSpin(spin);
+    document.querySelector("#focus").value = "";
+  });
+}
+
+// A readout, so the demo shows the globe is genuinely turning.
+setInterval(() => {
+  document.querySelector("#lon").textContent = globe.longitude.toFixed(2);
+}, 100);
+</script>
+</body>
+</html>

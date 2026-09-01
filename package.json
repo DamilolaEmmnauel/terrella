@@ -1,0 +1,25 @@
+{
+  "name": "region-globe",
+  "version": "0.1.0",
+  "description": "An interactive orthographic globe that highlights groups of countries and puts markers on them. Canvas, no build step.",
+  "type": "module",
+  "main": "src/globe.js",
+  "exports": {
+    ".": "./src/globe.js",
+    "./globe.css": "./src/globe.css"
+  },
+  "files": ["src", "data", "README.md", "LICENSE"],
+  "keywords": ["globe", "d3", "d3-geo", "orthographic", "map", "topojson", "canvas", "regions", "visualisation"],
+  "license": "MIT",
+  "peerDependencies": {
+    "d3-geo": ">=3",
+    "topojson-client": ">=3"
+  },
+  "peerDependenciesMeta": {
+    "d3-geo": { "optional": true },
+    "topojson-client": { "optional": true }
+  },
+  "scripts": {
+    "demo": "python3 -m http.server 8080"
+  }
+}

@@ -1,0 +1,59 @@
+/**
+ * Default styles for region-globe.
+ *
+ * Optional: the library only needs the wrapper to be positioned, so the
+ * tooltip can sit over the canvas. Everything else here is presentation you
+ * are meant to override.
+ */
+
+.region-globe {
+  position: relative;
+  width: 100%;
+  /* The canvas is sized in JS from the wrapper's width, so the wrapper needs
+     a width but never a height. */
+}
+
+.region-globe__canvas {
+  display: block;
+  width: 100%;
+}
+
+.region-globe__tip {
+  position: absolute;
+  z-index: 2;
+  /* Anchored on the marker, so it is nudged up and centred from there. */
+  transform: translate(-50%, calc(-100% - 14px));
+  pointer-events: none;
+
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 8px 20px -8px rgba(16, 24, 40, 0.3);
+
+  font-size: 13px;
+  line-height: 1.3;
+  color: #1f2d3d;
+
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+
+.region-globe__tip.is-on {
+  opacity: 1;
+}
+
+.region-globe__time {
+  color: #6b7c8d;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .region-globe__tip {
+    transition: none;
+  }
+}
