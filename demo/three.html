@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>terrella / three</title>
+<link rel="stylesheet" href="../dist/terrella.css">
 <style>
   :root {
     --ink: #16202b;
@@ -115,6 +116,7 @@
       </div>
 
       <div class="readout">
+        <div id="hover">Hovering nothing</div>
         <div id="backend">Backend: checking</div>
         <div id="calls">Draw calls: 0</div>
       </div>
@@ -151,15 +153,15 @@ const regions = [
 ];
 
 const markers = [
-  { name: "Lagos", coords: [3.4, 6.5], country: 566 },
-  { name: "Nairobi", coords: [36.8, -1.3], country: 404 },
-  { name: "Johannesburg", coords: [28.0, -26.2], country: 710 },
-  { name: "Manila", coords: [121.0, 14.6], country: 608 },
-  { name: "Jakarta", coords: [106.8, -6.2], country: 360 },
-  { name: "Hanoi", coords: [105.8, 21.0], country: 704 },
-  { name: "Bogota", coords: [-74.1, 4.7], country: 170 },
-  { name: "Sao Paulo", coords: [-46.6, -23.5], country: 76 },
-  { name: "Mexico City", coords: [-99.1, 19.4], country: 484 },
+  { name: "Lagos", coords: [3.4, 6.5], country: 566, timezone: "Africa/Lagos" },
+  { name: "Nairobi", coords: [36.8, -1.3], country: 404, timezone: "Africa/Nairobi" },
+  { name: "Johannesburg", coords: [28.0, -26.2], country: 710, timezone: "Africa/Johannesburg" },
+  { name: "Manila", coords: [121.0, 14.6], country: 608, timezone: "Asia/Manila" },
+  { name: "Jakarta", coords: [106.8, -6.2], country: 360, timezone: "Asia/Jakarta" },
+  { name: "Hanoi", coords: [105.8, 21.0], country: 704, timezone: "Asia/Ho_Chi_Minh" },
+  { name: "Bogota", coords: [-74.1, 4.7], country: 170, timezone: "America/Bogota" },
+  { name: "Sao Paulo", coords: [-46.6, -23.5], country: 76, timezone: "America/Sao_Paulo" },
+  { name: "Mexico City", coords: [-99.1, 19.4], country: 484, timezone: "America/Mexico_City" },
 ];
 
 const arcs = [
@@ -191,6 +193,10 @@ const globe = await createGlobe(document.querySelector("#globe"), {
   atmosphere: 1,
   tilt: -18,
   longitude: 110,
+  onMarkerHover: (m) => {
+    document.querySelector("#hover").textContent =
+      m ? `Hovering ${m.name}` : "Hovering nothing";
+  },
 });
 
 document.querySelector("#backend").textContent =

@@ -9,6 +9,7 @@ import { createMapTexture, type MapTexture } from "./texture";
 import { createGlobeScene, type GlobeScene } from "./scene";
 import { createMarkers, type MarkerField } from "./markers";
 import { createArcs, type ArcField } from "./arcs";
+import { createHover, type HoverHandle } from "./hover";
 import type {
   GlobeInstance,
   GlobeOptions,
@@ -141,7 +142,28 @@ export async function createGlobe(
   group.rotation.x = (config.tilt * Math.PI) / 180;
 
   let markerField: MarkerField = createMarkers(group, markers, RADIUS, palette);
-  let arcField: ArcField = createArcs(group, arcs, RADIUS, palette);
+  const arcField: ArcField = createArcs(group, arcs, RADIUS, palette);
+
+  // The wrapper has to be positioned for the tooltip to sit over the canvas.
+  // Setting it here rather than requiring it in the caller's CSS, because a
+  // static wrapper puts every tooltip in the top-left of the page and the
+  // cause is not obvious.
+  if (getComputedStyle(element).position === "static") {
+    element.style.position = "relative";
+  }
+
+  const hover: HoverHandle | null = config.tooltips
+    ? createHover({
+        element,
+        canvas: renderer.domElement as HTMLCanvasElement,
+        camera,
+        globe: globeScene.globe,
+        locale: config.locale,
+        onHover: config.onMarkerHover,
+        onClick: config.onMarkerClick,
+      })
+    : null;
+  hover?.setTargets(markerField.hitMesh, markers);
 
   // --- controls -------------------------------------------------------------
 
@@ -188,6 +210,10 @@ export async function createGlobe(
 
     controls.update();
     renderer.render(scene, camera);
+
+    // After the render, so the world matrices the raycast and the tooltip
+    // projection both rely on are the ones just drawn rather than last frame's.
+    hover?.update();
   }
 
   layout();
@@ -195,9 +221,12 @@ export async function createGlobe(
   globalThis.addEventListener?.("resize", onResize);
 
   if (still) {
-    // One frame, no loop.
+    // Reduced motion means the globe does not move on its own. It does not
+    // mean the page is dead: a hover still has to respond, so the loop runs
+    // with the spin at zero rather than being switched off entirely.
     timer.update();
     renderer.render(scene, camera);
+    if (hover) renderer.setAnimationLoop(frame);
   } else {
     renderer.setAnimationLoop(frame);
   }
@@ -210,6 +239,9 @@ export async function createGlobe(
   function rebuildMarkers(): void {
     markerField.dispose();
     markerField = createMarkers(group, markers, RADIUS, palette);
+    // The hover handle holds the old mesh and the old marker list, and its
+    // hovered index refers to a set that no longer exists.
+    hover?.setTargets(markerField.hitMesh, markers);
   }
 
   // --- public surface -------------------------------------------------------
@@ -314,6 +346,7 @@ export async function createGlobe(
       globalThis.removeEventListener?.("resize", onResize);
       timer.disconnect();
       controls.dispose();
+      hover?.dispose();
       markerField.dispose();
       arcField.dispose();
       globeScene.dispose();

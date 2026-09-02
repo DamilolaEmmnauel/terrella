@@ -203,6 +203,20 @@ projection; use the 2D renderer for flat maps.
 | `textureSize` | `2048` | Texture width; height is half |
 | `forceWebGL` | `false` | Force the fallback backend, to reproduce a bug |
 
+Markers hover in 3D as they do in 2D: the same tooltip, the same local clock,
+the same `onMarkerHover` and `onMarkerClick` callbacks.
+
+The part worth knowing is occlusion. A raycast against the markers alone
+happily hits one on the far side of the planet, so the cursor picks up a city
+that is behind the globe and the tooltip appears over empty ocean. The sphere
+is therefore included in the raycast and a marker only counts when nothing is
+in front of it. Verified in a browser: every near-side marker is hoverable and
+none of the far-side ones leak through.
+
+Markers are also a few pixels across, so hit-testing uses a larger invisible
+copy of them. Invisible objects are still raycastable, because three tests
+`object.layers` and never `object.visible`.
+
 The instance also exposes `scene`, `camera`, `renderer` and `controls`, so
 anything three.js can do to a scene you can still do.
 
@@ -253,7 +267,6 @@ and only the countries belonging to a region are painted individually.
 - No keyboard control.
 - Antarctica can overflow the ocean shape slightly in flat projections.
 - Zoom is not implemented; the sphere is a fixed size.
-- The 3D renderer has no marker tooltips or hover; the 2D one does.
 - No satellite or topographic texture support yet. The sphere is drawn from the
   vector map, which is the point, but a photographic option would be useful.
 

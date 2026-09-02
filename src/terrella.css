@@ -1,12 +1,12 @@
 /**
- * Default styles for region-globe.
+ * Default styles for terrella.
  *
  * Optional: the library only needs the wrapper to be positioned, so the
  * tooltip can sit over the canvas. Everything else here is presentation you
  * are meant to override.
  */
 
-.region-globe {
+.terrella {
   position: relative;
   width: 100%;
   /* The canvas is sized in JS from the wrapper's width, so the wrapper needs
