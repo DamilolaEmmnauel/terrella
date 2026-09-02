@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      # The published surface is the build output, so a broken bundle should
+      # fail here rather than at someone's install.
+      - name: Check the bundle defines the global
+        run: node -e "const s=require('fs').readFileSync('dist/terrella.global.js','utf8'); if(!s.includes('terrella')) { throw new Error('global build is missing its global name') }"

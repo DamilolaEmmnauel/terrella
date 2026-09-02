@@ -1,161 +1,212 @@
-# region-globe
+# terrella
 
-An interactive orthographic globe that highlights groups of countries and puts
-markers on them. Drag to spin, flick to throw, hover a marker for its local time.
+An interactive globe for the web. Highlight countries and regions, place
+markers, and choose how it looks.
 
-Drawn on a canvas rather than as SVG, so a few hundred country paths animate at
-60fps without a thousand DOM nodes. No build step, no framework, about 400 lines.
+A terrella is a small model of the Earth. William Gilbert built one in 1600 to
+study magnetism, which is roughly what this is.
 
-![A globe with Africa highlighted and markers on Lagos, Nairobi and Johannesburg](docs/screenshot.png)
-
-## Why this exists
-
-Every "countries we operate in" globe gets rebuilt from scratch, and the fiddly
-parts are always the same: which country ids the atlas actually uses, hiding
-markers once they pass the horizon, making a drag feel like a throw rather than
-a jump, and not animating when someone has asked their machine to stop moving.
-
-This is those parts, solved once.
-
-## Install
+<p align="center">
+  <img src="docs/screenshot.png" alt="A globe with Africa highlighted and markers on Lagos, Nairobi and Johannesburg" width="45%">
+  <img src="docs/screenshot-dots.png" alt="The same globe in the dotted style" width="45%">
+</p>
 
 ```sh
-npm install region-globe d3-geo d3-array topojson-client
+npm install terrella
 ```
 
-`d3-geo` and `topojson-client` are peer dependencies rather than bundled, so a
-page already using d3 does not ship it twice. `d3-geo` needs `d3-array` at
-runtime.
-
-Or use it straight from a CDN with no install at all — see `demo/index.html`.
-
-## Use
-
 ```js
-import { createGlobe } from "region-globe";
-import "region-globe/globe.css";
-
-const world = await fetch("/countries-110m.json").then((r) => r.json());
+import { createGlobe } from "terrella";
+import world from "world-atlas/countries-110m.json";
 
 const globe = createGlobe(document.querySelector("#globe"), {
   world,
   regions: [
-    {
-      id: "africa",
-      name: "Africa",
-      countries: ["566", "404", "710", "231", "288"],  // ISO 3166-1 numeric
-      highlight: ["566", "404", "710"],                 // a stronger colour
-      markers: ["Lagos", "Nairobi", "Johannesburg"],    // shown when focused
-      longitude: 20,                                    // where to park it
-    },
+    { id: "sea", name: "Southeast Asia", countries: [608, 360, 704] },
   ],
   markers: [
-    { name: "Lagos", coords: [3.38, 6.52], timezone: "Africa/Lagos" },
-    { name: "Nairobi", coords: [36.8, -1.3], timezone: "Africa/Nairobi" },
-    { name: "Johannesburg", coords: [28.0, -26.2], timezone: "Africa/Johannesburg" },
+    { name: "Manila", coords: [121.0, 14.6], country: 608, timezone: "Asia/Manila" },
   ],
+});
+
+globe.focus("sea");
+```
+
+Drag to spin, flick to throw, hover a marker for its local time.
+
+## Why this exists
+
+Most lightweight globe libraries do markers and arcs but cannot highlight
+countries. The ones that can are built on three.js and cost hundreds of
+kilobytes. terrella is the middle: country and region highlighting on a 2D
+canvas, with d3-geo doing the projection maths.
+
+The fiddly parts are the same in every hand-rolled globe, and they are what
+this actually solves:
+
+- Which country ids the atlas uses, and the fact that yours are probably not
+  padded the same way.
+- Hiding markers once they pass the horizon, because an orthographic
+  projection happily projects the far side of the world onto the near side.
+- Making a drag feel like a throw rather than a jump.
+- Not animating at all when someone has asked their machine to stop moving.
+- Aiming the camera at a region without working the angle out by hand.
+
+## Styles
+
+Three built in. Pass `style` at construction or call `setStyle` later.
+
+| Style | What it draws |
+| --- | --- |
+| `solid` | Flat country fills with hairline seams. The default. |
+| `dots` | Land as a field of dots, fading toward the limb. |
+| `wireframe` | Coastlines over a graticule. |
+
+```js
+globe.setStyle("dots");
+```
+
+Write your own by passing an object instead of a name. `prepare` runs once and
+whatever it returns is handed to every `paint`:
+
+```js
+globe.setStyle({
+  name: "my-style",
+  prepare: ({ land, countries }) => ({ /* expensive work, once */ }),
+  paint: (frame, state) => {
+    frame.ctx.fillStyle = frame.palette.land;
+    frame.ctx.beginPath();
+    frame.path(frame.land);
+    frame.ctx.fill();
+  },
 });
 ```
 
-The wrapper needs to be positioned and have a width. The canvas takes its height
-from that width, so give the wrapper a width and nothing else.
+## Projections
 
-```css
-#globe { position: relative; width: 100%; max-width: 560px; }
-```
-
-## Country ids
-
-Regions are lists of **ISO 3166-1 numeric** codes, as strings, because that is
-what the world-atlas topojson uses. Nigeria is `"566"`, not `"NG"` and not `566`.
-Leading zeros matter: Algeria is `"012"`.
-
-The library pads what you pass, so `12`, `"12"` and `"012"` all work.
-
-`data/countries-110m.json` is included. It is the 1:110m Natural Earth atlas via
-[world-atlas](https://github.com/topojson/world-atlas), public domain. Swap in
-`countries-50m.json` for more coastline detail at about four times the size.
-
-## Options
-
-| Option | Default | What it does |
-| --- | --- | --- |
-| `world` | required | The topojson atlas |
-| `regions` | `[]` | `{ id, name, countries, highlight, markers, color, highlightColor, longitude, tilt }` |
-| `markers` | `[]` | `{ name, coords: [lon, lat], timezone, color, size }` |
-| `spin` | `3.2` | Ambient rotation, degrees per second. `0` holds still |
-| `tilt` | `-14` | Axial tilt in degrees |
-| `longitude` | `18` | Starting longitude at the centre |
-| `ratio` | `1` | Canvas height as a multiple of width |
-| `radius` | `0.46` | Sphere radius as a fraction of width |
-| `draggable` | `true` | Drag to rotate, with momentum |
-| `tooltips` | `true` | Hover a marker for its name and local time |
-| `pulseMs` | `1600` | Marker pulse period. `0` disables it |
-| `respectReducedMotion` | `true` | Draw one frame instead of animating |
-| `palette` | see below | Colours |
-| `locale` | system | Passed to `Intl.DateTimeFormat` for marker times |
-| `onMarkerHover` | — | `(marker \| null) => void` |
-| `onMarkerClick` | — | `(marker, event) => void` |
-
-### Palette
+`orthographic` (a globe, the default), `equirectangular` and `naturalEarth`
+(flat maps). Everything else works the same in all three.
 
 ```js
-palette: {
-  ocean: "#edf4fb",
-  land: "#cdd8e3",        // countries in no region
-  border: "#ffffff",      // seams
-  region: "#a9cdec",      // a region's countries
-  highlight: "#2ea6f5",   // that region's `highlight` list
-  marker: "#1769a8",
-  markerRing: "#ffffff",
-  rim: "rgba(43, 69, 95, 0.10)",   // the shading that reads as curvature
+globe.setProjection("naturalEarth");
+```
+
+## Regions
+
+A region is a group of ISO 3166-1 numeric country ids treated as one thing.
+Ids can be numbers or strings, padded or not.
+
+```js
+{
+  id: "africa",
+  name: "Africa",
+  countries: [566, 404, 710, 818],
+  highlight: [566],          // a subset, painted in highlightColor
+  color: "#a9cdec",
+  highlightColor: "#2ea6f5",
 }
 ```
 
-## Methods
+`focus(id)` parks that region facing the viewer and stops the drift. If the
+region has no `longitude`, the camera aims at the centroid of its countries,
+computed as a vector average so a region spanning the antimeridian does not end
+up centred on the Atlantic. `focus(null)` releases it.
+
+## Colours
+
+Every colour is in one palette object, and any subset can be overridden.
 
 ```js
-globe.focus("africa");   // park that region facing the viewer, paint only it,
-                         // show only its markers, stop the ambient spin
-globe.focus(null);       // release it back to drifting
-
-globe.setSpin(0);        // change rotation without touching anything else
-globe.longitude;         // current centre longitude, degrees
-globe.canvas;            // the canvas element
-globe.destroy();         // stop the loop and remove what it added
+globe.setPalette({ ocean: "#f1f4f7", land: "#c6ced8", highlight: "#3c5570" });
 ```
+
+Two entries are derived rather than required. A colour that reads well as a
+filled continent disappears as scattered dots, so the `dots` style pushes
+`land` away from `ocean` unless you set `dot` yourself, and `wireframe` does
+the same for its coastline unless you set `outline`. The direction follows the
+background's luminance, so this works on a dark palette too.
+
+## API
+
+```ts
+createGlobe(element, options) => GlobeInstance
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `world` | required | TopoJSON with a `countries` object |
+| `style` | `"solid"` | Name or your own painter |
+| `projection` | `"orthographic"` | |
+| `regions` | `[]` | |
+| `markers` | `[]` | |
+| `arcs` | `[]` | Great-circle lines between two points |
+| `palette` | see above | Any subset |
+| `spin` | `3.2` | Degrees per second; 0 holds still |
+| `tilt` | `-14` | Degrees of axial tilt |
+| `longitude` | `18` | Starting longitude at the centre |
+| `ratio` | `1` | Canvas height as a multiple of its width |
+| `radius` | `0.46` | Sphere radius as a fraction of width |
+| `draggable` | `true` | |
+| `tooltips` | `true` | |
+| `pulseMs` | `1600` | Marker pulse period; 0 disables |
+| `respectReducedMotion` | `true` | Draw one still frame instead of animating |
+| `dotSpacing` | `2.2` | Degrees between dots in the `dots` style |
+| `dotSize` | `1.1` | Dot radius in pixels |
+| `label` | derived | Overrides the canvas aria-label |
+| `locale` | browser | For marker clock formatting |
+| `onMarkerHover` | | `(marker \| null) => void` |
+| `onMarkerClick` | | `(marker, event) => void` |
+
+The instance exposes `focus`, `setStyle`, `setProjection`, `setPalette`,
+`setSpin`, `setMarkers`, `longitude`, `canvas` and `destroy`.
+
+## Data
+
+Any TopoJSON with a `countries` object works. `world-atlas`'s `countries-110m`
+is the usual one, and a copy is in `data/` so the demo runs without a network.
+
+## From a CDN
+
+`dist/terrella.global.js` bundles d3-geo and topojson-client into one file that
+defines `window.terrella`, so a plain HTML page needs no build step. The `npm`
+build keeps them external so an app already using d3 does not ship it twice.
 
 ## Accessibility
 
-The canvas gets `role="img"` and a label naming the regions; pass `label` to
-write your own. With `prefers-reduced-motion: reduce` the globe draws one frame
-and stays put, rather than spinning behind someone who asked it not to.
+The canvas carries `role="img"` and a generated label naming the regions.
+`prefers-reduced-motion` draws a single still frame and disables dragging.
+Nothing here is keyboard-operable yet, which is the main gap.
 
-A canvas globe is a picture, not a data table. If the regions carry information
-a reader needs, put it in the page as text too.
+## Performance
 
-## Run the demo
+The land dots need to know which grid points are on land. Doing that with
+`geoContains` took 2.4 seconds at the default spacing and 65 seconds at a tight
+one, all on the main thread. The land is instead rasterised once into a small
+offscreen bitmap, after which each test is one array read: the same work is now
+about 6ms. Total dots are capped at 40,000, because past that it stops reading
+as a globe and starts costing frames.
+
+Countries are drawn from one merged land shape rather than 177 separate fills,
+and only the countries belonging to a region are painted individually.
+
+## Known gaps
+
+- No keyboard control.
+- Antarctica can overflow the ocean shape slightly in flat projections.
+- Zoom is not implemented; the sphere is a fixed size.
+- No WebGL renderer yet. The plan is a `terrella/three` entry point behind this
+  same API, for textures and lighting.
+
+## Development
 
 ```sh
+npm install
+npm test          # vitest
+npm run typecheck
+npm run build
 npm run demo      # then open http://localhost:8080/demo/
 ```
 
-## Notes on the fiddly parts
-
-**Markers past the horizon.** An orthographic projection happily returns
-coordinates for a point on the far side of the sphere, so markers appear to
-float over the wrong continent. They are hidden by great-circle distance from
-the point facing the viewer, not by checking whether the projection returned
-something.
-
-**Flick, glide, drift.** On release the throw velocity decays exponentially back
-to the ambient spin, so the three phases are one motion. The pointer velocity is
-low-passed, or a single stuttery sample sends the globe flying.
-
-**Land drawn twice.** All countries are merged into one shape for the base fill,
-then only the countries in a region are drawn individually. Filling 170 separate
-paths every frame is the easy way to make this expensive.
-
 ## Licence
 
-MIT. The atlas data is public domain.
+MIT.
