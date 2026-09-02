@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>terrella / three</title>
+<style>
+  :root {
+    --ink: #16202b;
+    --ink-soft: #5b6b7c;
+    --line: #e2e8ef;
+    --bg: #ffffff;
+    --panel: #f7f9fb;
+    --accent: #1769a8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 32px 80px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 40px; }
+  h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .tagline { color: var(--ink-soft); margin: 0; max-width: 62ch; }
+
+  .stage { display: grid; grid-template-columns: 1fr 260px; gap: 40px; align-items: start; }
+  @media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
+
+  #globe { position: relative; width: 100%; max-width: 560px; margin: 0 auto; cursor: grab; }
+  #globe:active { cursor: grabbing; }
+  #globe canvas { display: block; width: 100%; }
+
+  .panel { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 20px; }
+  .field { margin-bottom: 20px; }
+  .field:last-child { margin-bottom: 0; }
+  .label {
+    display: block; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--ink-soft); margin-bottom: 8px;
+  }
+  select {
+    width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--bg); color: inherit; font: inherit; font-size: 14px;
+  }
+  .segmented { display: flex; gap: 6px; flex-wrap: wrap; }
+  .segmented button {
+    flex: 1 1 auto; padding: 7px 10px; border: 1px solid var(--line);
+    border-radius: 7px; background: var(--bg); color: var(--ink-soft);
+    font: inherit; font-size: 13px; cursor: pointer;
+  }
+  .segmented button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .readout {
+    border-top: 1px solid var(--line); padding-top: 14px;
+    font-size: 13px; color: var(--ink-soft); font-variant-numeric: tabular-nums;
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "../node_modules/three/build/three.module.js",
+    "three/webgpu": "../node_modules/three/build/three.webgpu.js",
+    "three/tsl": "../node_modules/three/build/three.tsl.js",
+    "three/addons/": "../node_modules/three/examples/jsm/",
+    "d3-geo": "../node_modules/d3-geo/src/index.js",
+    "d3-array": "../node_modules/d3-array/src/index.js",
+    "topojson-client": "../node_modules/topojson-client/src/index.js",
+    "internmap": "../node_modules/internmap/src/index.js"
+  }
+}
+</script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>terrella / three</h1>
+    <p class="tagline">
+      The same globe on a real sphere. Drag to orbit. Every style is drawn by
+      the same painters the 2D renderer uses, wrapped onto the sphere as an
+      equirectangular texture, so a style written once works in both.
+    </p>
+  </header>
+
+  <div class="stage">
+    <div id="globe"></div>
+
+    <div class="panel">
+      <div class="field">
+        <span class="label">Style</span>
+        <div class="segmented" id="styles">
+          <button data-style="solid" aria-pressed="true">Solid</button>
+          <button data-style="dots" aria-pressed="false">Dots</button>
+          <button data-style="wireframe" aria-pressed="false">Wire</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="label" for="region">Focus a region</label>
+        <select id="region">
+          <option value="">All regions, drifting</option>
+          <option value="africa">Africa</option>
+          <option value="sea">Southeast Asia</option>
+          <option value="latam">Latin America</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="label">Palette</span>
+        <div class="segmented" id="palettes">
+          <button data-palette="default" aria-pressed="true">Default</button>
+          <button data-palette="slate" aria-pressed="false">Slate</button>
+          <button data-palette="night" aria-pressed="false">Night</button>
+        </div>
+      </div>
+
+      <div class="readout">
+        <div id="backend">Backend: checking</div>
+        <div id="calls">Draw calls: 0</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { createGlobe } from "../dist/three/index.js";
+import { Color } from "three";
+
+const world = await (await fetch("../data/countries-110m.json")).json();
+
+const regions = [
+  {
+    id: "africa", name: "Africa",
+    countries: [12, 24, 72, 108, 120, 140, 148, 178, 180, 204, 226, 231, 232, 262,
+                266, 270, 288, 324, 384, 404, 426, 430, 434, 450, 454, 466, 478,
+                480, 504, 508, 516, 562, 566, 624, 646, 686, 690, 694, 706, 710,
+                716, 728, 729, 748, 768, 788, 800, 818, 834, 854, 894],
+    highlight: [566, 404, 710],
+  },
+  {
+    id: "sea", name: "Southeast Asia",
+    countries: [96, 104, 116, 360, 418, 458, 608, 626, 702, 704],
+    highlight: [608, 360, 704],
+  },
+  {
+    id: "latam", name: "Latin America",
+    countries: [32, 68, 76, 152, 170, 188, 214, 218, 222, 320, 340, 484, 558,
+                591, 600, 604, 858, 862],
+    highlight: [76, 484, 170],
+  },
+];
+
+const markers = [
+  { name: "Lagos", coords: [3.4, 6.5], country: 566 },
+  { name: "Nairobi", coords: [36.8, -1.3], country: 404 },
+  { name: "Johannesburg", coords: [28.0, -26.2], country: 710 },
+  { name: "Manila", coords: [121.0, 14.6], country: 608 },
+  { name: "Jakarta", coords: [106.8, -6.2], country: 360 },
+  { name: "Hanoi", coords: [105.8, 21.0], country: 704 },
+  { name: "Bogota", coords: [-74.1, 4.7], country: 170 },
+  { name: "Sao Paulo", coords: [-46.6, -23.5], country: 76 },
+  { name: "Mexico City", coords: [-99.1, 19.4], country: 484 },
+];
+
+const arcs = [
+  { from: [3.4, 6.5], to: [-46.6, -23.5] },
+  { from: [121.0, 14.6], to: [-99.1, 19.4] },
+];
+
+const PALETTES = {
+  default: { atmosphere: "#4db2ff", background: undefined, colors: {} },
+  slate: {
+    atmosphere: "#7f96ad", background: undefined,
+    colors: {
+      ocean: "#f1f4f7", land: "#c6ced8", border: "#ffffff",
+      region: "#98a7b8", highlight: "#3c5570", marker: "#22303f",
+    },
+  },
+  night: {
+    atmosphere: "#2f6ea8", background: "#0b1017",
+    colors: {
+      ocean: "#0f1620", land: "#22303f", border: "#0b1017",
+      region: "#2b4a63", highlight: "#4da3e0", marker: "#7fd1ff",
+      markerRing: "#0b1017",
+    },
+  },
+};
+
+const globe = await createGlobe(document.querySelector("#globe"), {
+  world, regions, markers, arcs,
+  atmosphere: 1,
+  tilt: -18,
+  longitude: 110,
+});
+
+document.querySelector("#backend").textContent =
+  `Backend: ${globe.usingWebGL ? "WebGL2 (fallback)" : "WebGPU"}`;
+
+setInterval(() => {
+  document.querySelector("#calls").textContent =
+    `Draw calls: ${globe.renderer.info.render.drawCalls}`;
+}, 500);
+
+function wireGroup(id, attribute, apply) {
+  const group = document.querySelector(id);
+  group.addEventListener("click", (event) => {
+    const button = event.target.closest("button");
+    if (!button) return;
+    for (const b of group.querySelectorAll("button")) {
+      b.setAttribute("aria-pressed", String(b === button));
+    }
+    apply(button.dataset[attribute]);
+  });
+}
+
+wireGroup("#styles", "style", (v) => globe.setStyle(v));
+wireGroup("#palettes", "palette", (v) => {
+  const preset = PALETTES[v];
+  globe.setPalette(preset.colors);
+  globe.scene.background = preset.background ? new Color(preset.background) : null;
+  document.body.style.background = preset.background ?? "#ffffff";
+  document.body.style.color = preset.background ? "#e6edf5" : "#16202b";
+});
+
+document.querySelector("#region").addEventListener("change", (event) => {
+  globe.focus(event.target.value || null);
+});
+
+window.__globe = globe;
+document.body.dataset.ready = "1";
+</script>
+</body>
+</html>

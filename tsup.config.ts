@@ -2,16 +2,19 @@ import { defineConfig } from "tsup";
 
 export default defineConfig([
   {
-    entry: ["src/index.ts"],
+    entry: ["src/index.ts", "src/three/index.ts"],
     format: ["esm", "cjs"],
     dts: true,
     sourcemap: true,
     clean: true,
     // d3-geo and topojson-client stay external for the module builds so a host
     // app that already depends on them does not ship a second copy.
-    external: ["d3-geo", "topojson-client"],
+    external: ["d3-geo", "topojson-client", "three", "three/webgpu", "three/tsl", /^three\/addons\//],
   },
   {
+    // Only the 2D renderer gets a standalone browser build. Bundling three.js
+    // into it would be a few hundred KB for a file whose whole point is that a
+    // plain HTML page can drop it in.
     // The browser build is the opposite trade: one file that works from a CDN
     // with no install and no import map, so everything is bundled in.
     entry: { terrella: "src/index.ts" },

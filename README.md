@@ -160,6 +160,65 @@ createGlobe(element, options) => GlobeInstance
 The instance exposes `focus`, `setStyle`, `setProjection`, `setPalette`,
 `setSpin`, `setMarkers`, `longitude`, `canvas` and `destroy`.
 
+## 3D
+
+A second entry point renders the same globe on a real sphere. three.js is an
+optional peer dependency, so the 2D build stays 7KB for the pages that only
+want that.
+
+```sh
+npm install terrella three
+```
+
+```js
+import { createGlobe } from "terrella/three";
+
+const globe = await createGlobe(element, { world, regions, markers, arcs });
+```
+
+![The globe on a sphere in a dark palette, with Southeast Asia highlighted and a great-circle arc](docs/screenshot-three.png)
+
+It is async because `WebGPURenderer` needs `await renderer.init()`. The
+renderer picks WebGPU where the browser has it and falls back to WebGL2
+everywhere else, from one codebase; `globe.usingWebGL` reports which it got.
+Both paths are verified rendering.
+
+The API is otherwise the same, and that is not a coincidence: **both renderers
+drive the same style painters.** The 2D one paints to the visible canvas, and
+the 3D one paints the identical thing into an equirectangular texture and wraps
+it around the sphere. So `solid`, `dots`, `wireframe` and any style you write
+yourself all work in 3D the day they are written, and the two renderers cannot
+drift apart in how they draw a country.
+
+`setProjection` is the one exception. It throws, because a sphere is the
+projection; use the 2D renderer for flat maps.
+
+| Extra option | Default | |
+| --- | --- | --- |
+| `background` | transparent | Colour behind the globe |
+| `atmosphere` | `1` | Rim strength; 0 removes it |
+| `atmosphereColor` | `#4db2ff` | |
+| `lit` | `false` | Shade with a light instead of showing the map flat |
+| `zoom` | `false` | Wheel zoom |
+| `textureSize` | `2048` | Texture width; height is half |
+| `forceWebGL` | `false` | Force the fallback backend, to reproduce a bug |
+
+The instance also exposes `scene`, `camera`, `renderer` and `controls`, so
+anything three.js can do to a scene you can still do.
+
+Markers are one `InstancedMesh`, so a hundred of them is one draw call rather
+than a hundred. Arcs are tubes following a great circle, because WebGL ignores
+line width on most platforms and geometry is the only way to control it. The
+demo scene runs in 6 draw calls and about 18,000 triangles.
+
+Two notes on how it is shaded, both of which were wrong first. The map is
+darkened toward the limb, and that shading rather than the atmosphere is what
+makes it read as a sphere: a flat diagrammatic texture has no shading of its
+own, so without it the silhouette is the only depth cue and the result looks
+like a sticker. And the atmosphere's alpha falls to zero **at** the shell's
+silhouette rather than peaking there, or it draws a hard outline exactly where
+it stops existing.
+
 ## Data
 
 Any TopoJSON with a `countries` object works. `world-atlas`'s `countries-110m`
@@ -194,8 +253,9 @@ and only the countries belonging to a region are painted individually.
 - No keyboard control.
 - Antarctica can overflow the ocean shape slightly in flat projections.
 - Zoom is not implemented; the sphere is a fixed size.
-- No WebGL renderer yet. The plan is a `terrella/three` entry point behind this
-  same API, for textures and lighting.
+- The 3D renderer has no marker tooltips or hover; the 2D one does.
+- No satellite or topographic texture support yet. The sphere is drawn from the
+  vector map, which is the point, but a photographic option would be useful.
 
 ## Development
 
