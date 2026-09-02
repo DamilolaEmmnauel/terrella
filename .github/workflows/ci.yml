@@ -29,5 +29,10 @@ jobs:
       - run: npm run build
       # The published surface is the build output, so a broken bundle should
       # fail here rather than at someone's install.
+      # The preview page is what anyone evaluating the library actually opens,
+      # and its build asserts every inline slot is still present in the
+      # template, so a bad edit fails here rather than shipping a broken page.
+      - run: npm run preview
+
       - name: Check the bundle defines the global
         run: node -e "const s=require('fs').readFileSync('dist/terrella.global.js','utf8'); if(!s.includes('terrella')) { throw new Error('global build is missing its global name') }"

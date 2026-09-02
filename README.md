@@ -270,6 +270,25 @@ and only the countries belonging to a region are painted individually.
 - No satellite or topographic texture support yet. The sphere is drawn from the
   vector map, which is the point, but a photographic option would be useful.
 
+## Seeing it without installing anything
+
+`preview.html` at the repo root is a single self-contained file: open it in a
+browser and it runs, with no server, no build and no network. It carries both
+renderers, the world atlas and its own styles inline, because a page opened
+from the filesystem cannot `fetch` a sibling file or load ES modules.
+
+It shows the hero globe in 3D, four live specimens of the styles, and a
+workbench with every control wired to a real call.
+
+It is generated. Edit `demo/preview.template.html` and run:
+
+```sh
+npm run preview
+```
+
+The two pages under `demo/` are the development versions and do need a build
+and a local server.
+
 ## Development
 
 ```sh

@@ -220,6 +220,12 @@ export async function createGlobe(
   const onResize = () => layout();
   globalThis.addEventListener?.("resize", onResize);
 
+  // The container can change size without the window doing so: a grid
+  // reflowing, a sidebar collapsing. See the note in the 2D renderer.
+  const observer =
+    typeof ResizeObserver === "function" ? new ResizeObserver(() => layout()) : null;
+  observer?.observe(element);
+
   if (still) {
     // Reduced motion means the globe does not move on its own. It does not
     // mean the page is dead: a hover still has to respond, so the loop runs
@@ -344,6 +350,7 @@ export async function createGlobe(
       running = false;
       renderer.setAnimationLoop(null);
       globalThis.removeEventListener?.("resize", onResize);
+      observer?.disconnect();
       timer.disconnect();
       controls.dispose();
       hover?.dispose();

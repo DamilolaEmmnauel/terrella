@@ -252,6 +252,25 @@ export function createGlobe(
   };
   globalThis.addEventListener?.("resize", onResize);
 
+  /**
+   * Follow the container, not just the window.
+   *
+   * A window listener alone is wrong whenever the element is resized by
+   * something other than the viewport: a sibling being inserted into the same
+   * grid, a sidebar collapsing, a details element opening. The preview page
+   * exposed this by creating four globes in a row, each measuring itself
+   * before the next one narrowed the column it was in, so they ended up 1038,
+   * 501, 322 and 233 pixels wide instead of equal.
+   */
+  const observer =
+    typeof ResizeObserver === "function"
+      ? new ResizeObserver(() => {
+          layout();
+          redraw();
+        })
+      : null;
+  observer?.observe(element);
+
   // --- start ----------------------------------------------------------------
 
   layout();
@@ -347,6 +366,7 @@ export function createGlobe(
       if (frameId !== null) cancelAnimationFrame(frameId);
       frameId = null;
       globalThis.removeEventListener?.("resize", onResize);
+      observer?.disconnect();
       dragHandle?.destroy();
       canvas.removeEventListener("mousemove", onMouseMove);
       canvas.removeEventListener("mouseleave", onMouseLeave);

@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>terrella</title>
+<meta name="description" content="An interactive globe for the web. Highlight countries and regions, place markers, choose a render style.">
+<style>
+/*
+ * The page is a specimen sheet from an instrument maker's catalogue, which is
+ * what a terrella actually was: a small model Earth, made by hand, to be
+ * examined. The plates below are live rather than photographed, because the
+ * only honest way to show a rendering library is to run it.
+ *
+ * The palette is the library's own. Rather than invent colours for the page
+ * and let them argue with the globes, the ink, rules and accent are taken from
+ * the default globe palette, so the page and its subject agree.
+ */
+:root {
+  color-scheme: light dark;
+
+  --paper: #fbfcfd;
+  --paper-sunk: #f2f6f9;
+  --ink: #101922;
+  --ink-soft: #56677a;
+  --rule: #dde5ec;
+  /* The library's own marker blue. Used for links, active states and nothing
+     else: the globes are allowed to carry colour, the page is not. */
+  --accent: #1769a8;
+
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  --measure: 64ch;
+  --gap: clamp(28px, 5vw, 56px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0d141b;
+    --paper-sunk: #121b24;
+    --ink: #e7eef5;
+    --ink-soft: #8ba0b4;
+    --rule: #23303d;
+    --accent: #63b3ea;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0d141b;
+  --paper-sunk: #121b24;
+  --ink: #e7eef5;
+  --ink-soft: #8ba0b4;
+  --rule: #23303d;
+  --accent: #63b3ea;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.6 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet { max-width: 1120px; margin: 0 auto; padding: clamp(32px, 6vw, 72px) clamp(20px, 4vw, 40px) 96px; }
+
+a { color: var(--accent); text-underline-offset: 3px; }
+
+/* --- masthead ----------------------------------------------------------- */
+
+.masthead {
+  display: grid;
+  grid-template-columns: 1fr minmax(320px, 46%);
+  gap: var(--gap);
+  align-items: center;
+  padding-bottom: clamp(32px, 5vw, 56px);
+  border-bottom: 1px solid var(--rule);
+}
+@media (max-width: 860px) {
+  .masthead { grid-template-columns: 1fr; }
+}
+
+.wordmark {
+  font: 400 clamp(40px, 7vw, 62px)/1 var(--serif);
+  letter-spacing: -0.015em;
+  margin: 0 0 18px;
+}
+
+.standfirst {
+  font: 400 clamp(17px, 2vw, 19px)/1.55 var(--serif);
+  max-width: 46ch;
+  margin: 0 0 22px;
+}
+
+.provenance {
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  max-width: 52ch;
+  margin: 0 0 26px;
+  padding-left: 16px;
+  border-left: 2px solid var(--rule);
+}
+
+.specs { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
+.specs li {
+  font: 11.5px/1 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 7px 11px;
+}
+
+/* --- the hero globe ----------------------------------------------------- */
+
+.hero { position: relative; width: 100%; }
+.hero canvas { display: block; width: 100%; }
+
+.hero-note {
+  margin: 14px 0 0;
+  text-align: center;
+  font: 11.5px/1.4 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+/* --- sections ----------------------------------------------------------- */
+
+section { margin-top: clamp(56px, 8vw, 96px); }
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.section-head h2 {
+  font: 400 clamp(24px, 3.2vw, 31px)/1.2 var(--serif);
+  margin: 0;
+}
+.section-head .index {
+  font: 11.5px/1 var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+}
+.section-lede { color: var(--ink-soft); max-width: var(--measure); margin: 0 0 32px; }
+
+/* --- plates ------------------------------------------------------------- */
+
+.plates {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: clamp(20px, 3vw, 34px);
+}
+
+.plate { display: flex; flex-direction: column; }
+
+.plate-frame {
+  position: relative;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper-sunk);
+  overflow: hidden;
+}
+.plate-frame canvas { display: block; width: 100%; }
+
+.plate-caption {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin-top: 11px;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule);
+}
+.plate-number {
+  font: 11.5px/1 var(--mono);
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  flex: none;
+}
+.plate-title { font: 15px/1.35 var(--serif); }
+.plate-sub { display: block; color: var(--ink-soft); font: 12.5px/1.4 var(--sans); }
+
+/* --- workbench ---------------------------------------------------------- */
+
+.bench {
+  display: grid;
+  /* The globe is capped rather than filling the column: at full sheet width it
+     towers over a 250px panel and leaves a block of dead space beneath it. */
+  grid-template-columns: minmax(0, 560px) 250px;
+  justify-content: center;
+  gap: var(--gap);
+  align-items: start;
+}
+@media (max-width: 860px) { .bench { grid-template-columns: 1fr; } }
+
+.bench-stage { position: relative; width: 100%; }
+.bench-stage canvas { display: block; width: 100%; }
+
+.controls {
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 20px;
+  background: var(--paper-sunk);
+}
+.control { margin-bottom: 19px; }
+.control:last-child { margin-bottom: 0; }
+.control > .label {
+  display: block;
+  font: 11px/1 var(--mono);
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 9px;
+}
+
+.choices { display: flex; gap: 6px; flex-wrap: wrap; }
+.choices button {
+  flex: 1 1 auto;
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+  color: var(--ink-soft);
+  font: 13px/1.2 var(--sans);
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease;
+}
+.choices button:hover { color: var(--ink); }
+.choices button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.choices button:focus-visible,
+select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+select {
+  width: 100%;
+  padding: 7px 9px;
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  background: var(--paper);
+  color: inherit;
+  font: 14px/1.2 var(--sans);
+}
+
+.readout {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font: 12px/1.7 var(--mono);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- code --------------------------------------------------------------- */
+
+pre {
+  margin: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  background: var(--paper-sunk);
+  overflow-x: auto;
+  font: 13px/1.65 var(--mono);
+  color: var(--ink);
+}
+pre .c { color: var(--ink-soft); }
+pre .k { color: var(--accent); }
+
+.code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  /* Each block sizes to its own content; stretching the shorter one leaves a
+     panel of blank background inside a bordered box. */
+  align-items: start;
+  /* Narrower than the sheet: at full width the boxes are far wider than the
+     longest line of code in them, which reads as two half-empty panels. */
+  max-width: 940px;
+}
+
+/* --- footer ------------------------------------------------------------- */
+
+footer {
+  margin-top: clamp(56px, 8vw, 96px);
+  padding-top: 26px;
+  border-top: 1px solid var(--rule);
+  color: var(--ink-soft);
+  font-size: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  justify-content: space-between;
+}
+
+/* Revealed by GSAP; visible without JS so the page is never blank. */
+.reveal { opacity: 1; }
+.js .reveal { opacity: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .js .reveal { opacity: 1; }
+}
+
+/*__TERRELLA_CSS__*/
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <div>
+      <h1 class="wordmark">terrella</h1>
+      <p class="standfirst">
+        An interactive globe for the web. Highlight countries and regions,
+        place markers, choose how it looks.
+      </p>
+      <p class="provenance">
+        A terrella is a small model of the Earth. William Gilbert built one in
+        1600, magnetised it, and moved a compass over its surface to argue that
+        the planet itself was a magnet. Every globe on this page is running
+        live, not a picture of one.
+      </p>
+      <ul class="specs">
+        <li>17 KB gzipped</li>
+        <li>2D canvas + WebGPU</li>
+        <li>no build step</li>
+        <li>MIT</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="hero" id="hero"></div>
+      <p class="hero-note" id="hero-note">drag to turn &middot; hover a marker</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <span class="index">Plates</span>
+      <h2>Four specimens</h2>
+    </div>
+    <p class="section-lede">
+      The same data and the same code, drawn four ways. Each of these is a live
+      globe, turning independently.
+    </p>
+
+    <div class="plates" id="plates"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="index">Workbench</span>
+      <h2>Try it</h2>
+    </div>
+    <p class="section-lede">
+      Every control here is a single call on the instance. Focusing a region
+      aims the camera at the centroid of its countries, so you never work out
+      an angle by hand.
+    </p>
+
+    <div class="bench">
+      <div class="bench-stage" id="bench"></div>
+
+      <div class="controls">
+        <div class="control">
+          <span class="label">Style</span>
+          <div class="choices" id="c-style">
+            <button data-style="solid" aria-pressed="true">Solid</button>
+            <button data-style="dots" aria-pressed="false">Dots</button>
+            <button data-style="wireframe" aria-pressed="false">Wire</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <span class="label">Projection</span>
+          <div class="choices" id="c-projection">
+            <button data-projection="orthographic" aria-pressed="true">Globe</button>
+            <button data-projection="naturalEarth" aria-pressed="false">Flat</button>
+          </div>
+        </div>
+
+        <div class="control">
+          <label class="label" for="c-region">Region</label>
+          <select id="c-region">
+            <option value="">All, drifting</option>
+            <option value="africa">Africa</option>
+            <option value="sea">Southeast Asia</option>
+            <option value="latam">Latin America</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <span class="label">Palette</span>
+          <div class="choices" id="c-palette">
+            <button data-palette="default" aria-pressed="true">Default</button>
+            <button data-palette="slate" aria-pressed="false">Slate</button>
+            <button data-palette="warm" aria-pressed="false">Warm</button>
+          </div>
+        </div>
+
+        <div class="readout">
+          <div id="r-longitude">longitude 0.00&deg;</div>
+          <div id="r-hover">hovering nothing</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="index">Usage</span>
+      <h2>The whole API</h2>
+    </div>
+    <p class="section-lede">
+      Two renderers, one interface. Swapping the import is the entire change,
+      because both drive the same style painters.
+    </p>
+
+    <div class="code-grid">
+      <pre><span class="c">// 2D canvas, 7 KB with d3 external</span>
+<span class="k">import</span> { createGlobe } <span class="k">from</span> "terrella";
+
+<span class="k">const</span> globe = createGlobe(el, {
+  world,
+  style: "dots",
+  regions: [
+    { id: "sea", countries: [608, 360, 704] },
+  ],
+  markers: [
+    { name: "Manila", coords: [121, 14.6] },
+  ],
+});
+
+globe.focus("sea");</pre>
+
+      <pre><span class="c">// the same globe on a sphere</span>
+<span class="k">import</span> { createGlobe } <span class="k">from</span> "terrella/three";
+
+<span class="k">const</span> globe = <span class="k">await</span> createGlobe(el, {
+  world,
+  regions,
+  markers,
+  arcs: [{ from: [3.4, 6.5], to: [-46.6, -23.5] }],
+});
+
+<span class="c">// WebGPU where available, WebGL2 elsewhere</span>
+globe.usingWebGL;</pre>
+    </div>
+  </section>
+
+  <footer>
+    <span>terrella &middot; MIT</span>
+    <span id="foot-backend">renderer: checking</span>
+    <span>this page runs offline, from one file</span>
+  </footer>
+</div>
+
+<script>/*__GSAP__*/</script>
+<script>/*__WORLD__*/</script>
+<script>/*__TERRELLA__*/</script>
+<script>
+(async () => {
+  "use strict";
+  document.documentElement.classList.add("js");
+
+  const world = window.__WORLD__;
+  const { createGlobe2D, createGlobe3D } = window.terrella;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* --- shared data ----------------------------------------------------- */
+
+  const REGIONS = [
+    {
+      id: "africa", name: "Africa",
+      countries: [12, 24, 72, 108, 120, 140, 148, 178, 180, 204, 226, 231, 232, 262,
+                  266, 270, 288, 324, 384, 404, 426, 430, 434, 450, 454, 466, 478,
+                  480, 504, 508, 516, 562, 566, 624, 646, 686, 690, 694, 706, 710,
+                  716, 728, 729, 748, 768, 788, 800, 818, 834, 854, 894],
+      highlight: [566, 404, 710],
+    },
+    {
+      id: "sea", name: "Southeast Asia",
+      countries: [96, 104, 116, 360, 418, 458, 608, 626, 702, 704],
+      highlight: [608, 360, 704],
+    },
+    {
+      id: "latam", name: "Latin America",
+      countries: [32, 68, 76, 152, 170, 188, 214, 218, 222, 320, 340, 484, 558,
+                  591, 600, 604, 858, 862],
+      highlight: [76, 484, 170],
+    },
+  ];
+
+  const MARKERS = [
+    { name: "Lagos", coords: [3.4, 6.5], country: 566, timezone: "Africa/Lagos" },
+    { name: "Nairobi", coords: [36.8, -1.3], country: 404, timezone: "Africa/Nairobi" },
+    { name: "Johannesburg", coords: [28.0, -26.2], country: 710, timezone: "Africa/Johannesburg" },
+    { name: "Manila", coords: [121.0, 14.6], country: 608, timezone: "Asia/Manila" },
+    { name: "Jakarta", coords: [106.8, -6.2], country: 360, timezone: "Asia/Jakarta" },
+    { name: "Hanoi", coords: [105.8, 21.0], country: 704, timezone: "Asia/Ho_Chi_Minh" },
+    { name: "Bogota", coords: [-74.1, 4.7], country: 170, timezone: "America/Bogota" },
+    { name: "Sao Paulo", coords: [-46.6, -23.5], country: 76, timezone: "America/Sao_Paulo" },
+    { name: "Mexico City", coords: [-99.1, 19.4], country: 484, timezone: "America/Mexico_City" },
+  ];
+
+  const PALETTES = {
+    default: {},
+    slate: {
+      ocean: "#f1f4f7", land: "#c6ced8", border: "#ffffff",
+      region: "#98a7b8", highlight: "#3c5570", marker: "#22303f",
+      rim: "rgba(30, 41, 54, 0.12)",
+    },
+    warm: {
+      ocean: "#fbf5ee", land: "#e3d3c1", border: "#fffaf4",
+      region: "#dcb894", highlight: "#b4682c", marker: "#8a4419",
+      rim: "rgba(102, 66, 38, 0.12)",
+    },
+    night: {
+      ocean: "#0f1620", land: "#22303f", border: "#0b1017",
+      region: "#2b4a63", highlight: "#4da3e0", marker: "#7fd1ff",
+      markerRing: "#0b1017", rim: "rgba(0, 0, 0, 0.35)",
+    },
+    nightWire: {
+      ocean: "#0f1620", land: "#31465c", border: "#1d2a36",
+      region: "#2b4a63", highlight: "#4da3e0", marker: "#7fd1ff",
+      markerRing: "#0b1017", rim: "rgba(0, 0, 0, 0.35)",
+      outline: "#5f7d99",
+    },
+  };
+
+  /*
+   * The globes have to follow the page's theme.
+   *
+   * The page chrome reads from CSS custom properties and adapts on its own,
+   * but a canvas cannot: in dark mode the default palette rendered a glaring
+   * white disc that looked like a hole punched through the page. So each
+   * globe is given a palette per theme, and the fourth plate deliberately
+   * carries the opposite of whatever the page is, so the range on show always
+   * includes both.
+   */
+  const dark = matchMedia("(prefers-color-scheme: dark)");
+  const themed = (light, night) => (dark.matches ? night : light);
+
+  /* --- the hero -------------------------------------------------------- */
+
+  // The 3D renderer if the machine can manage it, the 2D one otherwise. The
+  // page must show a globe either way: a blank hero is worse than a flat one.
+  let hero = null;
+  let heroIs3D = false;
+  try {
+    hero = await createGlobe3D(document.querySelector("#hero"), {
+      world,
+      regions: REGIONS,
+      markers: MARKERS,
+      arcs: [
+        { from: [3.4, 6.5], to: [-46.6, -23.5] },
+        { from: [121.0, 14.6], to: [-99.1, 19.4] },
+      ],
+      tilt: -18,
+      longitude: 20,
+      atmosphere: 1,
+      palette: PALETTES[themed("default", "night")],
+      onMarkerHover: (m) => {
+        document.querySelector("#hero-note").textContent =
+          m ? `${m.name}` : "drag to turn · hover a marker";
+      },
+    });
+    heroIs3D = true;
+  } catch (error) {
+    hero = createGlobe2D(document.querySelector("#hero"), {
+      world, regions: REGIONS, markers: MARKERS,
+      palette: PALETTES[themed("default", "night")],
+    });
+  }
+
+  document.querySelector("#foot-backend").textContent = heroIs3D
+    ? `renderer: ${hero.usingWebGL ? "WebGL2" : "WebGPU"}`
+    : "renderer: 2D canvas";
+
+  /* --- the plates ------------------------------------------------------ */
+
+  const PLATES = [
+    { n: "I", title: "Solid", sub: "flat fills, hairline seams", style: "solid", light: "default", night: "night" },
+    { n: "II", title: "Dots", sub: "sampled land, fading at the limb", style: "dots", light: "default", night: "night" },
+    { n: "III", title: "Wireframe", sub: "coastlines over a graticule", style: "wireframe", light: "slate", night: "nightWire" },
+    {
+      n: "IV", style: "dots",
+      // The counterweight: whichever way the page is, this one goes the other.
+      title: () => (dark.matches ? "Paper" : "Night"),
+      sub: "the palette is nine colours, any subset",
+      light: "night", night: "default",
+    },
+  ];
+
+  const plateHost = document.querySelector("#plates");
+  const plateGlobes = [];
+
+  for (const plate of PLATES) {
+    const figure = document.createElement("figure");
+    figure.className = "plate reveal";
+    figure.style.margin = "0";
+
+    const frame = document.createElement("div");
+    frame.className = "plate-frame";
+
+    const title = typeof plate.title === "function" ? plate.title() : plate.title;
+
+    const caption = document.createElement("figcaption");
+    caption.className = "plate-caption";
+    caption.innerHTML =
+      `<span class="plate-number">${plate.n}</span>` +
+      `<span><span class="plate-title" data-title>${title}</span>` +
+      `<span class="plate-sub">${plate.sub}</span></span>`;
+
+    figure.append(frame, caption);
+    plateHost.appendChild(figure);
+
+    plateGlobes.push(createGlobe2D(frame, {
+      world,
+      regions: REGIONS,
+      markers: MARKERS,
+      style: plate.style,
+      palette: PALETTES[themed(plate.light, plate.night)],
+      // Slower than the hero: four globes turning at full speed together is
+      // busy, and these are specimens to be compared rather than watched.
+      spin: 2.2,
+      tooltips: false,
+      // Coarser dots at this size; the default spacing is invisible detail here.
+      dotSpacing: 3.4,
+    }));
+  }
+
+  // Pause the plates that are off screen. Four extra animation loops running
+  // behind the fold is work nobody can see.
+  if ("IntersectionObserver" in window) {
+    const seen = new WeakMap();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const globe = seen.get(entry.target);
+        if (globe) globe.setSpin(entry.isIntersecting ? 2.2 : 0);
+      }
+    }, { rootMargin: "120px" });
+
+    plateHost.querySelectorAll(".plate").forEach((node, i) => {
+      seen.set(node, plateGlobes[i]);
+      observer.observe(node);
+    });
+  }
+
+  /* --- the workbench --------------------------------------------------- */
+
+  const bench = createGlobe2D(document.querySelector("#bench"), {
+    world,
+    regions: REGIONS,
+    markers: MARKERS,
+    palette: PALETTES[themed("default", "night")],
+    onMarkerHover: (m) => {
+      document.querySelector("#r-hover").textContent =
+        m ? `hovering ${m.name.toLowerCase()}` : "hovering nothing";
+    },
+  });
+
+  setInterval(() => {
+    document.querySelector("#r-longitude").textContent =
+      `longitude ${bench.longitude.toFixed(2)}°`;
+  }, 120);
+
+  function wire(id, key, apply) {
+    const group = document.querySelector(id);
+    group.addEventListener("click", (event) => {
+      const button = event.target.closest("button");
+      if (!button) return;
+      for (const other of group.querySelectorAll("button")) {
+        other.setAttribute("aria-pressed", String(other === button));
+      }
+      apply(button.dataset[key]);
+    });
+  }
+
+  wire("#c-style", "style", (v) => bench.setStyle(v));
+  wire("#c-projection", "projection", (v) => bench.setProjection(v));
+  wire("#c-palette", "palette", (v) => bench.setPalette(PALETTES[v]));
+
+  document.querySelector("#c-region").addEventListener("change", (event) => {
+    bench.focus(event.target.value || null);
+  });
+
+  /* --- follow the theme ------------------------------------------------ */
+
+  // Flipping the OS theme with the page open should not leave a white globe on
+  // a dark page until it is reloaded.
+  dark.addEventListener("change", () => {
+    hero.setPalette(PALETTES[themed("default", "night")]);
+    bench.setPalette(PALETTES[themed("default", "night")]);
+
+    plateGlobes.forEach((globe, i) => {
+      const plate = PLATES[i];
+      globe.setPalette(PALETTES[themed(plate.light, plate.night)]);
+      if (typeof plate.title === "function") {
+        const node = plateHost.children[i].querySelector("[data-title]");
+        if (node) node.textContent = plate.title();
+      }
+    });
+  });
+
+  /* --- entrance -------------------------------------------------------- */
+
+  if (reduced || !window.gsap) {
+    document.querySelectorAll(".reveal").forEach((n) => { n.style.opacity = "1"; });
+  } else {
+    gsap.registerPlugin(ScrollTrigger);
+
+    gsap.from(".masthead > div > *", {
+      y: 14, opacity: 0, duration: 0.7, ease: "power2.out", stagger: 0.07,
+    });
+
+    // The plates arrive as a run, in catalogue order, which is the one thing
+    // on the page where sequence carries meaning.
+    gsap.to(".plate", {
+      opacity: 1, y: 0, duration: 0.6, ease: "power2.out", stagger: 0.09,
+      scrollTrigger: { trigger: "#plates", start: "top 82%" },
+    });
+    gsap.from(".plate", {
+      y: 18, duration: 0.6, ease: "power2.out", stagger: 0.09,
+      scrollTrigger: { trigger: "#plates", start: "top 82%" },
+    });
+  }
+
+  document.body.dataset.ready = "1";
+})();
+</script>
+</body>
+</html>
