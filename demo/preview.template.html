@@ -24,6 +24,7 @@
   <div class="container">
     <a class="wordmark" href="#top">terrella <span class="version">v0.3.0</span></a>
     <nav class="site-nav" aria-label="Links">
+      <a href="#compare">Compare</a>
       <a href="#api">API</a>
       <a href="https://github.com/DamilolaEmmnauel/terrella">GitHub</a>
       <a href="https://www.npmjs.com/package/terrella">npm</a>
@@ -53,7 +54,8 @@
     </div>
 
     <div class="steps">
-      <article class="step step--hero" data-step="plain">
+      <article class="step step--hero" data-step="plain" data-layout="right">
+        <div class="step-inner">
         <h1 class="hero-title">A small model of the Earth.</h1>
         <p class="hero-lede">
           terrella is an interactive globe for the web. Highlight countries,
@@ -72,39 +74,46 @@
           <li>React &middot; web component &middot; SSR</li>
           <li>scroll to drive the globe &middot; hover a country</li>
         </ul>
+        </div>
       </article>
 
-      <article class="step" data-step="regions">
+      <article class="step" data-step="regions" data-layout="left" data-scene style="--scene-length: 220vh">
+        <div class="step-inner">
         <span class="step-index">01</span>
         <h2 class="step-title">Highlight countries.</h2>
         <p class="step-body">
           Group countries into a region and give it a colour. Name them the
           way you know them: "PH", "PHL" or 608 all work, and
-          countriesIn("Africa") names a whole continent. Hover any country
-          on the globe for its name.
+          countriesIn("Africa") names a whole continent. Keep scrolling: the
+          globe turns and lights more of them. Hover any country for its name.
         </p>
 <pre class="step-code">regions: [{
   id: <span class="s">"sea"</span>,
   countries: [<span class="s">"PH"</span>, <span class="s">"ID"</span>, <span class="s">"VN"</span>, <span class="s">"MY"</span>, <span class="s">"SG"</span>],
   highlight: [<span class="s">"PH"</span>],
 }]</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="markers">
+      <article class="step" data-step="markers" data-layout="left" data-scene style="--scene-length: 200vh">
+        <div class="step-inner">
         <span class="step-index">02</span>
         <h2 class="step-title">Place markers.</h2>
         <p class="step-body">
           A marker is a name and a coordinate. Give it a timezone and hovering
-          shows the local time. Markers hide as they pass the horizon, which an
-          orthographic projection will not do for you.
+          shows the local time. Keep scrolling and they land one by one, the
+          globe turning to each. Markers hide as they pass the horizon, which
+          an orthographic projection will not do for you.
         </p>
 <pre class="step-code">globe.setMarkers([
   { name: <span class="s">"Manila"</span>, coords: [121, 14.6],
     timezone: <span class="s">"Asia/Manila"</span> },
 ]);</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="values">
+      <article class="step" data-step="values" data-layout="left">
+        <div class="step-inner">
         <span class="step-index">03</span>
         <h2 class="step-title">Colour by number.</h2>
         <p class="step-body">
@@ -115,59 +124,75 @@
   NG: 213, ET: 120, EG: 109, CD: 99,
   TZ: 63, ZA: 60, KE: 54,
 });</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="focus">
+      <article class="step" data-step="focus" data-layout="right" data-scene style="--scene-length: 180vh">
+        <div class="step-inner">
         <span class="step-index">04</span>
         <h2 class="step-title">Aim the camera.</h2>
         <p class="step-body">
           focus glides to the centroid of a region's countries and holds
-          there, so you never work out an angle by hand. flyTo faces any
-          coordinate; tour visits a list of them.
+          there, so you never work out an angle by hand. Scroll on and it
+          visits three regions in turn. flyTo faces any coordinate; tour
+          visits a list of them.
         </p>
 <pre class="step-code">await globe.focus(<span class="s">"africa"</span>);
-await globe.flyTo([3.4, 6.5]);</pre>
+await globe.focus(<span class="s">"sea"</span>);
+await globe.focus(<span class="s">"latam"</span>);</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="labels">
+      <article class="step" data-step="labels" data-layout="right" data-scene style="--scene-length: 200vh">
+        <div class="step-inner">
         <span class="step-index">05</span>
         <h2 class="step-title">Name things.</h2>
         <p class="step-body">
           Labels sit at each country's centroid, hide past the horizon, fade
-          toward the limb, and carry a halo so they read on any palette.
+          toward the limb, and carry a halo so they read on any palette. Scroll
+          and the names arrive, then the markers get theirs.
         </p>
 <pre class="step-code">globe.setLabels({
   countries: <span class="s">"regions"</span>,
   markers: true,
 });</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="style">
+      <article class="step" data-step="style" data-layout="gallery" data-scene style="--scene-length: 260vh">
+        <div class="step-inner">
         <span class="step-index">06</span>
         <h2 class="step-title">Change the style.</h2>
         <p class="step-body">
-          Seven built in: solid, dots, wireframe, hatched, pixel, ascii and
-          stipple. A style is one paint function, so writing your own takes a
-          few lines, and it works in every renderer.
+          Seven built in. Scroll across them: solid, wireframe, hatched,
+          pixel, ascii, stipple and dots. A style is one paint function, so
+          writing your own takes a few lines, and it works in every renderer.
         </p>
 <pre class="step-code">globe.setStyle(<span class="s">"dots"</span>);</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="projection">
+      <article class="step" data-step="projection" data-layout="left" data-scene style="--scene-length: 200vh">
+        <div class="step-inner">
         <span class="step-index">07</span>
         <h2 class="step-title">Or the projection.</h2>
         <p class="step-body">
-          The same globe, unrolled. Regions, markers and styles come along.
+          As it arrives, the sphere opens into a map; scroll on and it closes
+          again. Regions, markers and styles come along; every point moves
+          from where one projection puts it to where the other does.
         </p>
 <pre class="step-code">globe.setProjection(<span class="s">"naturalEarth"</span>);</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="palette">
+      <article class="step" data-step="palette" data-layout="gallery" data-scene style="--scene-length: 300vh">
+        <div class="step-inner">
         <span class="step-index">08</span>
         <h2 class="step-title">Any palette.</h2>
         <p class="step-body">
-          Nine colours, any subset. Or set them as CSS custom properties and
-          let the globe follow the page; theme: "auto" follows the system.
+          Scroll across four palettes. Nine colours, any subset. Or set them
+          as CSS custom properties and let the globe follow the page; theme:
+          "auto" follows the system.
         </p>
 <pre class="step-code only-light">globe.setPalette({
   ocean: <span class="s">"#1c1c19"</span>,
@@ -179,9 +204,11 @@ await globe.flyTo([3.4, 6.5]);</pre>
   land: <span class="s">"#d3d0c5"</span>,
   highlight: <span class="s">"#d9481b"</span>,
 });</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="night">
+      <article class="step" data-step="night" data-layout="left">
+        <div class="step-inner">
         <span class="step-index">09</span>
         <h2 class="step-title">Night falls.</h2>
         <p class="step-body">
@@ -189,9 +216,11 @@ await globe.flyTo([3.4, 6.5]);</pre>
           is where it is right now.
         </p>
 <pre class="step-code">globe.setTerminator(true);</pre>
+        </div>
       </article>
 
-      <article class="step" data-step="three">
+      <article class="step" data-step="three" data-layout="left">
+        <div class="step-inner">
         <span class="step-index">10</span>
         <h2 class="step-title">Or a real sphere.</h2>
         <p class="step-body">
@@ -205,9 +234,61 @@ import { createGlobe } from <span class="s">"terrella/three"</span>;
 const globe = await createGlobe(el, {
   world, regions, markers, arcs,
 });</pre>
+        </div>
       </article>
     </div>
   </div>
+
+  <section class="section container" id="compare">
+    <h2 class="section-title">Why not the others.</h2>
+    <p class="section-lede">
+      The honest version. Each of these is good at what it was built for;
+      this is what each one asks of you, and what it leaves you to build.
+    </p>
+
+    <div class="compare-scroll">
+      <table class="compare">
+        <thead>
+          <tr>
+            <th scope="col">gzipped, from bundlephobia</th>
+            <th scope="col">terrella</th>
+            <th scope="col">cobe</th>
+            <th scope="col">globe.gl</th>
+            <th scope="col">react-simple-maps</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Size</th><td>20 KB, 28 KB with d3-geo inside</td><td>6 KB</td><td>546 KB</td><td>35 KB</td></tr>
+          <tr><th scope="row">Renders with</th><td>2D canvas, a WebGPU sphere, or SVG</td><td>WebGL shader</td><td>three.js</td><td>SVG</td></tr>
+          <tr><th scope="row">Highlight countries and regions</th><td>Yes, by any ISO code</td><td>No</td><td>Yes, with GeoJSON you supply</td><td>Yes, with GeoJSON you supply</td></tr>
+          <tr><th scope="row">Colour by value</th><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+          <tr><th scope="row">Country hover and click</th><td>Yes</td><td>No</td><td>Yes</td><td>Yes</td></tr>
+          <tr><th scope="row">Markers and arcs</th><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes, flat</td></tr>
+          <tr><th scope="row">Labels that hide behind the globe</th><td>Yes</td><td>Your own DOM, anchored</td><td>Yes</td><td>No globe</td></tr>
+          <tr><th scope="row">Render styles</th><td>Seven built in, or one paint function</td><td>Dots</td><td>Image textures</td><td>CSS on paths</td></tr>
+          <tr><th scope="row">Camera: glide, fly to, tour</th><td>Yes</td><td>You animate the angle</td><td>Yes</td><td>No</td></tr>
+          <tr><th scope="row">Flat projections</th><td>Three</td><td>No</td><td>No</td><td>Twenty and more</td></tr>
+          <tr><th scope="row">Day and night</th><td>Yes</td><td>No</td><td>No</td><td>No</td></tr>
+          <tr><th scope="row">Theme presets and CSS variables</th><td>Yes</td><td>No</td><td>No</td><td>CSS</td></tr>
+          <tr><th scope="row">Server-rendered SVG</th><td>Yes</td><td>No</td><td>No</td><td>Yes, in React</td></tr>
+          <tr><th scope="row">React, and plain HTML</th><td>Both, plus a web component</td><td>Vanilla</td><td>react-globe.gl, vanilla</td><td>React only</td></tr>
+          <tr><th scope="row">Keyboard and screen readers</th><td>Yes</td><td>No</td><td>No</td><td>Partly, the SVG is in the DOM</td></tr>
+          <tr><th scope="row">Atlas and country names included</th><td>Yes</td><td>A dot map</td><td>You supply</td><td>You supply</td></tr>
+          <tr><th scope="row">Hex bins, tiles, satellite imagery, 3D objects</th><td>No</td><td>No</td><td>Yes</td><td>No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="compare-note">
+      Where they win: cobe is a third of the size if a dotted globe with
+      markers is all a page needs. globe.gl draws hex bins, tiles, satellite
+      imagery and any three.js object you hand it. react-simple-maps has
+      twenty projections and lives naturally in a React tree. terrella is for
+      the page where countries have to mean something, at a size that does
+      not need a conversation.
+    </p>
+    <p class="compare-source">Sizes: bundlephobia, September 2026. Features: each project's README.</p>
+  </section>
 
   <section class="section container" id="api">
     <h2 class="section-title">Use it the way you build.</h2>
@@ -320,13 +401,20 @@ const svg = renderSVG({
 (async () => {
   "use strict";
 
+  // A story reads from the top. Browsers otherwise restore a mid-page
+  // scroll on reload, leaving pinned steps and scenes half set.
+  history.scrollRestoration = "manual";
+  scrollTo(0, 0);
+  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+  // ScrollTrigger remembers the last position in session storage too.
+  ScrollTrigger.clearScrollMemory("manual");
+
   const world = window.__WORLD__;
   const { REGIONS, MARKERS, ARCS, PALETTES, ringMarkup } = window.TERRELLA_DEMO;
   const { createGlobe2D, createGlobe3D } = window.terrella;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (selector) => document.querySelector(selector);
 
-  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
   const fade = (target, vars) =>
     gsap.to(target, { ...vars, duration: reduced ? 0 : vars.duration, overwrite: "auto" });
 
@@ -335,9 +423,11 @@ const svg = renderSVG({
    * than a jump. Touch devices keep their native scroll, which is already
    * inertial. Reduced motion keeps native scrolling everywhere.            */
 
+  // No scroll normalisation: it intercepts trackpad events and stutters on
+  // macOS. Native scrolling, lightly smoothed, is what feels right there.
   const smoother = reduced
     ? null
-    : ScrollSmoother.create({ smooth: 1.1, effects: false, normalizeScroll: true });
+    : ScrollSmoother.create({ smooth: 0.8, effects: false, normalizeScroll: false });
 
   for (const link of document.querySelectorAll('a[href^="#"]')) {
     link.addEventListener("click", (event) => {
@@ -376,6 +466,7 @@ const svg = renderSVG({
   const orrery = $("#orrery");
   orrery.insertAdjacentHTML("afterbegin", ringMarkup());
   const ring = orrery.querySelector(".ring");
+  const readout = orrery.querySelector(".readout");
 
   const globe = createGlobe2D($("#globe-2d"), {
     world, regions: REGIONS, markers: [],
@@ -412,6 +503,342 @@ const svg = renderSVG({
    * Each step is a complete state rather than a delta, so scrolling back up
    * lands on exactly what the reader saw before.                          */
 
+  /* --- scenes ----------------------------------------------------------- *
+   * A scene is a step that holds. Its text is pinned while the reader scrolls
+   * through the step's extra length, and the scroll position, as a progress
+   * from 0 to 1, drives the globe directly. Each scene sets the globe from
+   * its progress alone, so scrolling back replays it exactly.               */
+
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = (t) => (t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t));
+  /** 0 before `from`, 1 after `to`, eased between. */
+  const span = (p, from, to) => ease((p - from) / (to - from));
+
+  /** Sets values through the state record, so the next step's diff sees them. */
+  function setSceneValues(values) {
+    current.values = values;
+    globe.setValues(values, highlightOnly());
+  }
+
+  /** Points the globe without a glide: progress is the animation. */
+  function aim(longitude, tilt) {
+    globe.flyTo({ longitude, tilt }, { duration: 0 });
+  }
+
+  /** Markers and labels set by a scene are marked partial, so the next step restores them. */
+  function setSceneMarkers(list) {
+    current.markers = "partial";
+    globe.setMarkers(list);
+  }
+  function setSceneLabels(labels) {
+    current.labels = "partial";
+    globe.setLabels(labels);
+  }
+
+  /**
+   * Sets the globe part way between a sphere and a map. 0 is the sphere
+   * proper; anything above is an interpolated projection, recorded as
+   * "morph" so the next step knows to put the sphere back.
+   */
+  let lastMorph = -1;
+  function setSceneProjection(t) {
+    const clamped = Math.max(0, Math.min(1, t));
+    if (clamped === lastMorph) return;
+    lastMorph = clamped;
+    if (clamped === 0) {
+      current.projection = "orthographic";
+      globe.setProjection("orthographic");
+    } else {
+      current.projection = "morph";
+      globe.setProjection(terrella.projectionBetween("orthographic", "naturalEarth", clamped));
+    }
+
+  }
+
+  /** Markers in the order the camera visits them: Latin America, Africa, Southeast Asia. */
+  const MARKER_ORDER = ["Bogota", "Sao Paulo", "Mexico City", "Lagos", "Nairobi", "Johannesburg", "Manila", "Jakarta", "Hanoi"]
+    .map((name) => MARKERS.find((m) => m.name === name));
+
+  /**
+   * A gallery scene: the main globe is the first item of a row of globes
+   * that slides left as the reader scrolls. At the far end the main globe is
+   * made identical to the last cell and swapped into its place, so whatever
+   * the reader ends on is the globe that carries into the next step.
+   *
+   * `items` describe the other cells. `before(p)` may run first and return
+   * how far the row should have slid and whether the main globe is ready to
+   * drift with the others.
+   */
+  function gallery({ step: stepName, items, mainCaption, before }) {
+    const GAP = 48;
+    const wide = () => matchMedia("(min-width: 901px)").matches;
+    const text = (value) => (typeof value === "function" ? value() : value);
+    let row = null;
+    let cells = [];
+    let drifting = false;
+
+    function setMain(item) {
+      if (item.style && current.style !== item.style) {
+        current.style = item.style;
+        globe.setStyle(item.style);
+      }
+      if (item.palette) {
+        const colors = item.palette();
+        if (current.palette !== colors) {
+          current.palette = colors;
+          globe.setPalette(colors);
+        }
+      }
+    }
+
+    function build() {
+      row = document.createElement("div");
+      row.className = "style-row";
+      const main = document.createElement("figure");
+      main.className = "style-cell style-cell--main";
+      main.innerHTML = `<div class="style-globe"></div><figcaption>${text(mainCaption)}</figcaption>`;
+      row.appendChild(main);
+      for (const item of items) {
+        const cell = document.createElement("figure");
+        cell.className = "style-cell";
+        cell.innerHTML = `<div class="style-globe"></div><figcaption>${text(item.caption)}</figcaption>`;
+        row.appendChild(cell);
+      }
+      document.querySelector(`[data-step="${stepName}"] .step-inner`).appendChild(row);
+      gsap.set(row, { autoAlpha: 0 });
+
+      // Drawn like the main globe, so the swap at the end is invisible.
+      cells = [...row.querySelectorAll(".style-cell:not(.style-cell--main) .style-globe")].map((host, index) =>
+        createGlobe2D(host, {
+          world, regions: REGIONS, markers: MARKERS,
+          style: items[index].style ?? "solid",
+          palette: items[index].palette ? items[index].palette() : base().colors,
+          spin: 2, tooltips: false, accessible: false,
+          longitude: 20, tilt: -10,
+        }),
+      );
+      theme.onChange(() => {
+        cells.forEach((cell, index) => cell.setPalette(items[index].palette ? items[index].palette() : base().colors));
+        row.querySelectorAll("figcaption").forEach((caption, index) => {
+          caption.textContent = index === 0 ? text(mainCaption) : text(items[index - 1].caption);
+        });
+      });
+    }
+    // Built now rather than on first scroll, so no layout changes under a
+    // pinned step. The cells pause themselves while off screen.
+    if (wide()) build();
+
+    return (p) => {
+      const lead = before ? before(p) : { slide: p, settled: true };
+      if (!wide()) {
+        // No room for a row: the one globe takes each item in turn.
+        const index = Math.floor(lead.slide * (items.length + 1)) - 1;
+        if (index >= 0) setMain(items[Math.min(items.length - 1, index)]);
+        return;
+      }
+      if (!row) build();
+      const inner = row.parentElement.getBoundingClientRect();
+      const size = row.firstElementChild.getBoundingClientRect().width;
+      const stride = size + GAP;
+      const slide = lead.slide * items.length * stride;
+
+      // The row's origin is the viewport's centre, where the first slot sits.
+      row.style.left = `${innerWidth / 2 - inner.left}px`;
+      row.style.transform = `translateX(${-(slide + size / 2)}px)`;
+      // In the row the main globe is one of several: no ring, no readout.
+      fade(ring, { opacity: 0, duration: 0.3 });
+      fade(readout, { opacity: 0, duration: 0.3 });
+      gsap.set(row, { autoAlpha: 1 });
+
+      if (lead.slide < 0.985) {
+        // One of the row: it drifts at the row's pace once it is ready.
+        if (lead.settled && !drifting) {
+          drifting = true;
+          globe.setSpin(2);
+        }
+        gsap.set(orrery, { xPercent: (-slide / orrery.offsetWidth) * 100 });
+        return;
+      }
+      // The swap: the main globe takes the last cell's look and place, and
+      // keeps sliding with the now-hidden row until the row comes to rest.
+      drifting = false;
+      const last = cells[cells.length - 1];
+      setMain(items[items.length - 1]);
+      aim(last.longitude, -10);
+      gsap.set(orrery, { xPercent: ((items.length * stride - slide) / orrery.offsetWidth) * 100 });
+      gsap.set(row, { autoAlpha: 0 });
+    };
+  }
+
+  const SCENES = {
+    // Markers land one by one while the globe turns from region to region.
+    markers: (p) => {
+      const stops = [
+        { until: 0.3, longitude: -68, tilt: 8, first: 0, last: 3 },
+        { until: 0.64, longitude: 20, tilt: -6, first: 3, last: 6 },
+        { until: 1, longitude: 110, tilt: -6, first: 6, last: 9 },
+      ];
+      let longitude = stops[0].longitude;
+      let tilt = stops[0].tilt;
+      let placed = 0;
+      let start = 0;
+      stops.forEach((stop, index) => {
+        const swing = index === 0 ? 0 : 0.08;
+        const turn = index === 0 ? 1 : span(p, start, start + swing);
+        longitude = lerp(longitude, stop.longitude, turn);
+        tilt = lerp(tilt, stop.tilt, turn);
+        const hold = span(p, start + swing, stop.until - 0.02);
+        placed = Math.max(placed, stop.first + Math.round(hold * (stop.last - stop.first)));
+        start = stop.until;
+      });
+      aim(longitude, tilt);
+      setSceneMarkers(MARKER_ORDER.slice(0, placed));
+    },
+
+    // The map arrives flat (the unfold plays on the way in, below) and
+    // closes back into a sphere as the reader scrolls, so it reaches the
+    // palette row whole.
+    projection: (p) => {
+      const t = 1 - span(p, 0.15, 0.85);
+      aim(15, -10 * (1 - t));
+      setSceneProjection(t);
+    },
+
+    // The map folds back into a sphere in the first slot, then the row of
+    // palettes slides past. The last is the page's counterpart, which the
+    // night step keeps.
+    palette: gallery({
+      step: "palette",
+      items: [
+        { caption: "ocean", palette: () => PALETTES.ocean.colors },
+        { caption: () => counter().label.toLowerCase(), palette: () => counter().colors },
+        { caption: "ember", palette: () => PALETTES.ember.colors },
+      ],
+      mainCaption: () => base().label.toLowerCase(),
+      // The globe arrives as a sphere; make sure of it, and of the style,
+      // in case the reader skipped the fold.
+      before: (p) => {
+        setSceneProjection(0);
+        if (current.style !== "solid") {
+          current.style = "solid";
+          globe.setStyle("solid");
+        }
+        return { slide: p, settled: true };
+      },
+    }),
+
+    // One globe becomes seven: the styles, ending on dots, the style the
+    // next step needs.
+    style: gallery({
+      step: "style",
+      items: ["wireframe", "hatched", "pixel", "ascii", "stipple", "dots"].map((style) => ({ caption: style, style })),
+      mainCaption: "solid",
+    }),
+
+    // The camera itself: three real focus() glides, one per third.
+    focus: (() => {
+      let last = null;
+      return (p) => {
+        const target = p < 0.34 ? "africa" : p < 0.67 ? "sea" : "latam";
+        if (target === last) return;
+        last = target;
+        void globe.focus(target);
+      };
+    })(),
+
+    // Names arrive across Africa as the reader scrolls, then the markers get theirs.
+    labels: (() => {
+      const africa = terrella.countriesIn("Africa");
+      let last = null;
+      return (p) => {
+        const count = Math.round(span(p, 0, 0.8) * africa.length);
+        const markers = p > 0.85;
+        const key = `${count}:${markers}`;
+        if (key === last) return;
+        last = key;
+        setSceneLabels(count === 0 && !markers ? false : { countries: africa.slice(0, count), markers });
+      };
+    })(),
+
+    // Three regions come round in turn, and their countries light up one by
+    // one as each faces the reader.
+    regions: (() => {
+      const order = ["PH", "ID", "VN", "MY", "SG", "TH", "NG", "KE", "ZA", "GH", "ET", "EG", "BR", "MX", "CO", "AR", "CL", "PE"];
+      const stops = [
+        { until: 0.3, longitude: 110, tilt: -6, first: 0, last: 6 },
+        { until: 0.64, longitude: 20, tilt: -6, first: 6, last: 12 },
+        { until: 1, longitude: -68, tilt: 8, first: 12, last: 18 },
+      ];
+      return (p) => {
+        // Camera: hold on a region, then swing to the next between them.
+        let longitude = stops[0].longitude;
+        let tilt = stops[0].tilt;
+        let lit = 0;
+        let start = 0;
+        stops.forEach((stop, index) => {
+          const swing = index === 0 ? 0 : 0.08;
+          const turn = index === 0 ? 1 : span(p, start, start + swing);
+          longitude = lerp(longitude, stop.longitude, turn);
+          tilt = lerp(tilt, stop.tilt, turn);
+          // Countries light up through the hold, after the swing.
+          const hold = span(p, start + swing, stop.until - 0.02);
+          lit = Math.max(lit, stop.first + Math.round(hold * (stop.last - stop.first)));
+          start = stop.until;
+        });
+        aim(longitude, tilt);
+        const values = {};
+        for (const code of order.slice(0, lit)) values[code] = 1;
+        setSceneValues(lit > 0 ? values : null);
+      };
+    })(),
+  };
+
+  for (const step of document.querySelectorAll(".step[data-scene]")) {
+    const scene = SCENES[step.dataset.step];
+    if (!scene) continue;
+    const inner = step.querySelector(".step-inner");
+    const length = () => step.offsetHeight - innerHeight * 0.88;
+
+    // The text holds while the scene plays.
+    // The step's own top padding, as the share of the viewport ScrollTrigger wants.
+    const pinTop = () => `top ${(parseFloat(getComputedStyle(step).paddingTop) / innerHeight) * 100}%`;
+    ScrollTrigger.create({
+      trigger: inner,
+      start: pinTop,
+      end: () => `+=${length()}`,
+      pin: inner,
+      pinSpacing: false,
+    });
+    // Progress over the same stretch drives the globe. The step is activated
+    // first: in a fast scroll the progress can arrive before the activation
+    // would, and the activation must not undo what the scene has set. A
+    // scene only plays while it is active, so leaving it never replays it.
+    const play = (self) => {
+      if (!self.isActive) return;
+      activate(step);
+      scene(self.progress);
+    };
+    ScrollTrigger.create({
+      trigger: step,
+      start: "top top",
+      end: () => `+=${length()}`,
+      scrub: 0.4,
+      onUpdate: play,
+      onToggle: play,
+    });
+  }
+
+  /** A state whose camera is driven by its scene rather than by focus(). */
+  const SCENE = "scene";
+  /** Steps whose scene is a row of globes with the main globe as the first. */
+  const GALLERY_STEPS = new Set(["style", "palette"]);
+  /** Steps where the globe is in a row or is a map, so wears no ring. */
+  const RINGLESS = new Set(["style", "projection", "palette"]);
+  /** Land to highlight, for the choropleth step. */
+  const valueRamp = () => ({ range: [base().colors.land, base().colors.highlight] });
+  /** Every country the same highlight, for scenes that light countries up. */
+  const highlightOnly = () => () => base().colors.highlight;
+
   // Rebuilt when the theme changes, since every palette in it follows it.
   let STATES;
   function buildStates() {
@@ -419,15 +846,17 @@ const svg = renderSVG({
     const on = { style: "solid", projection: "orthographic", palette: chart, markers: true, values: null, labels: false, terminator: false };
     STATES = {
       plain: { ...on, palette: plain(), markers: false, focus: null },
-      regions: { ...on, markers: false, focus: "sea" },
-      markers: { ...on, focus: "sea" },
+      regions: { ...on, markers: false, focus: SCENE },
+      markers: { ...on, focus: SCENE },
       values: { ...on, values: VALUES, focus: "africa" },
-      focus: { ...on, focus: "africa" },
-      labels: { ...on, labels: { countries: "regions", markers: true }, focus: "africa" },
-      style: { ...on, style: "dots", focus: "africa" },
-      projection: { ...on, style: "dots", projection: "naturalEarth", focus: null },
-      palette: { ...on, palette: counter().colors, focus: "latam" },
-      night: { ...on, terminator: true, focus: null },
+      focus: { ...on, focus: SCENE },
+      labels: { ...on, focus: "africa" },
+      style: { ...on, style: SCENE, projection: SCENE, focus: SCENE },
+      projection: { ...on, style: "dots", projection: SCENE, focus: SCENE },
+      palette: { ...on, style: SCENE, palette: SCENE, projection: SCENE, focus: SCENE },
+      // The palette the row ended on stays for the night: a bright one, so
+      // the night side reads.
+      night: { ...on, palette: PALETTES.ember.colors, terminator: true, focus: null },
       three: { ...on, focus: null, sphere: true },
     };
   }
@@ -437,21 +866,37 @@ const svg = renderSVG({
   function apply(name) {
     current.step = name;
     const next = STATES[name];
-    if (current.style !== next.style) globe.setStyle(next.style);
-    if (current.projection !== next.projection) globe.setProjection(next.projection);
-    if (current.palette !== next.palette) globe.setPalette(next.palette);
+    if (!GALLERY_STEPS.has(name)) {
+      // Whatever a gallery did with the main globe's slide, undo it, and
+      // put its row away.
+      gsap.set(orrery, { xPercent: 0, autoAlpha: 1 });
+      fade(readout, { opacity: 1, duration: 0.3 });
+      gsap.set(".style-row", { autoAlpha: 0 });
+    }
+    if (next.style !== SCENE && current.style !== next.style) globe.setStyle(next.style);
+    if (next.projection !== SCENE && current.projection !== next.projection) globe.setProjection(next.projection);
+    if (next.palette !== SCENE && current.palette !== next.palette) globe.setPalette(next.palette);
     if (current.markers !== next.markers) globe.setMarkers(next.markers ? MARKERS : []);
-    if (current.values !== next.values) globe.setValues(next.values);
+    // The scale is passed every time: the instance keeps the last one, and a
+    // scene may have left the highlight-only scale behind.
+    if (current.values !== next.values) globe.setValues(next.values, valueRamp());
     if (current.labels !== next.labels) globe.setLabels(next.labels);
     if (current.terminator !== next.terminator) globe.setTerminator(next.terminator);
-    if (current.focus !== next.focus) globe.focus(next.focus);
+    if (next.focus === SCENE) {
+      // A scene aims the camera itself, from a globe with every region painted.
+      void globe.focus(null, { duration: 0 });
+    } else if (current.focus !== next.focus) {
+      void globe.focus(next.focus);
+    }
     Object.assign(current, next);
+    SCENES[name]?.(0);
 
     const showSphere = Boolean(next.sphere && sphere);
     $("#globe-2d").classList.toggle("is-off", showSphere);
     $("#globe-3d").classList.toggle("is-off", !showSphere);
-    // The ring is a meridian; it means nothing around a flat map.
-    fade(ring, { opacity: next.projection === "orthographic" ? 1 : 0, duration: 0.4 });
+    // The ring is a meridian round a whole sphere: not in a row of globes,
+    // and not on a map. It returns with the night.
+    fade(ring, { opacity: RINGLESS.has(name) ? 0 : 1, duration: 0.4 });
   }
 
   /*
@@ -468,19 +913,164 @@ const svg = renderSVG({
     apply(step.dataset.step);
     fade(steps, { opacity: (index, element) => (element === step ? 1 : 0.32), duration: 0.3, ease: "power2.out" });
   }
+
+  /*
+   * Two steps can be in their bands at once, so a trigger switching off is
+   * as important as one switching on: scroll back a little and the newer
+   * step leaves its band while the older one, which never left, has to be
+   * lit again. Every toggle therefore re-picks the current step from all
+   * the active ones: the one nearest the middle of the viewport.
+   */
+  const triggers = new Map();
+  function syncActive() {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const [step, trigger] of triggers) {
+      if (!trigger.isActive) continue;
+      const box = step.getBoundingClientRect();
+      const distance = Math.abs(box.top + box.height / 2 - innerHeight / 2);
+      if (distance < bestDistance) {
+        best = step;
+        bestDistance = distance;
+      }
+    }
+    if (best) activate(best);
+  }
   steps.forEach((step) => {
-    ScrollTrigger.create({
+    triggers.set(step, ScrollTrigger.create({
       trigger: step,
       start: "top 62%",
       end: "bottom 38%",
-      onToggle: (self) => {
-        if (self.isActive) activate(step);
-      },
-    });
+      onToggle: syncActive,
+      // And while two are in band, follow whichever is nearer the middle.
+      onUpdate: syncActive,
+    }));
   });
   apply("plain");
+  // Light the step in view now rather than on the first scroll.
+  syncActive();
+
+  /*
+   * The unfold plays on the way into the projection step: over the stretch
+   * where the style row's text unpins and the projection's arrives, the
+   * dots globe leaves its slot, moves into place and opens into a map, all
+   * in one motion. Scrolling back closes it into the slot again.
+   */
+  {
+    const styleStep = document.querySelector('[data-step="style"]');
+    let from = 15;
+    const unfold = (self) => {
+      if (!self.isActive) return;
+      if (self.progress < 0.02) from = globe.longitude;
+      // Most of the visible change happens early in the blend, so the
+      // progress is bent to keep the map opening through the whole move.
+      const u = Math.pow(self.progress, 1.7);
+      aim(lerp(from, 15, span(u, 0, 0.6)), -10 * (1 - u));
+      setSceneProjection(u);
+    };
+    ScrollTrigger.create({
+      trigger: styleStep,
+      start: "bottom 88%",
+      end: "bottom top",
+      scrub: 0.4,
+      onUpdate: unfold,
+      onToggle: unfold,
+    });
+  }
+
   // Fonts and globes settle after the first layout; trigger positions must follow.
   addEventListener("load", () => ScrollTrigger.refresh());
+
+  /* --- the globe travels ---------------------------------------------- *
+   * Each step names a layout: where the globe sits and how large. One
+   * scrubbed timeline moves the orrery between them, so the globe glides
+   * from side to side, down into the centre and back up, in step with the
+   * reader's hand. Narrow screens keep the globe fixed at the top instead. */
+
+  // Never above 1: a scaled-up canvas goes soft.
+  const LAYOUTS = {
+    right: { cx: 0.72, cy: 0.5, scale: 1 },
+    left: { cx: 0.28, cy: 0.5, scale: 1 },
+    low: { cx: 0.5, cy: 0.68, scale: 0.62 },
+    high: { cx: 0.5, cy: 0.32, scale: 0.62 },
+    // The first slot of the style gallery, under the text column.
+    gallery: { cx: 0.5, cy: 0.74, scale: 0.56 },
+  };
+  const placement = (name) => {
+    const layout = LAYOUTS[name] ?? LAYOUTS.right;
+    return { x: (layout.cx - 0.5) * innerWidth, y: (layout.cy - 0.5) * innerHeight, scale: layout.scale };
+  };
+
+  gsap.matchMedia().add("(min-width: 901px)", () => {
+    let travel = null;
+    const ordered = [...steps];
+
+    function build() {
+      travel?.kill();
+      gsap.set(orrery, placement(ordered[0].dataset.layout));
+
+      const range = story.offsetHeight - innerHeight;
+      const LENGTH = 10;
+      // Document positions, measured on screen and corrected for the
+      // smoother's offset: offsetTop would be relative to the steps column.
+      const scrolled = smoother ? smoother.scrollTop() : scrollY;
+      const top = (element) => element.getBoundingClientRect().top + scrolled;
+      const storyTop = top(story);
+
+      // The moves: each step whose layout differs from the one before it,
+      // placed where its trigger fires (top of the step at 62% of the view).
+      const moves = [];
+      let previous = ordered[0].dataset.layout;
+      ordered.slice(1).forEach((step, index) => {
+        const layout = step.dataset.layout;
+        if (layout === previous) return;
+        previous = layout;
+        const before = ordered[index];
+        const unit = (px) => (px / range) * LENGTH;
+        const vh = innerHeight;
+        // The move waits until the previous step's text is mostly gone, and
+        // lands before the next step pins its text or, for a plain step,
+        // before its text is centred. Timed in viewport heights: the story
+        // is long, and a fraction of it would be a slow, early move.
+        const at = unit(top(step) - storyTop - vh * 0.62);
+        // Out of a scene, the globe leaves shortly after the text unpins, once
+        // the text has cleared the height it will move through; out of a
+        // plain step, once the text is mostly gone.
+        const leaves = before.dataset.scene !== undefined ? vh * 0.63 : vh * 0.5;
+        const notBefore = unit(top(before) + before.offsetHeight - leaves - storyTop);
+        const landBy = step.dataset.scene !== undefined ? unit(top(step) - storyTop) : at + unit(vh * 0.5);
+        moves.push({ layout, at, notBefore, landBy, vhUnit: unit(vh) });
+      });
+
+      travel = gsap.timeline({
+        scrollTrigger: { trigger: story, start: "top top", end: `+=${range}`, scrub: 0.6 },
+      });
+      moves.forEach((move, index) => {
+        // A move begins as the next step's text enters the viewport and lands
+        // just after it arrives, so the globe is still while a step is read.
+        // It must also finish before the following move starts, or the globe
+        // turns back mid-glide. Half a unit is about half a viewport of
+        // scroll; slow at both ends so nothing lurches.
+        const start = Math.max(0, move.notBefore);
+        const duration = Math.max(0.2 * move.vhUnit, Math.min(0.6 * move.vhUnit, move.landBy - start));
+        travel.to(orrery, { ...placement(move.layout), duration, ease: "sine.inOut" }, start);
+      });
+      travel.to({}, { duration: 0.001 }, LENGTH);
+    }
+
+    build();
+    let pending = 0;
+    const onResize = () => {
+      clearTimeout(pending);
+      pending = setTimeout(build, 150);
+    };
+    addEventListener("resize", onResize);
+    return () => {
+      removeEventListener("resize", onResize);
+      travel?.kill();
+      gsap.set(orrery, { clearProps: "transform" });
+    };
+  });
 
   /* --- theme ----------------------------------------------------------- */
 
@@ -531,6 +1121,8 @@ const svg = renderSVG({
     wireCopy(button, () => button.parentElement.querySelector("pre").textContent);
   }
 
+  // Exposed so the headless checks can inspect the story globe.
+  window.__globe = globe;
   document.body.dataset.ready = "1";
 })();
 </script>

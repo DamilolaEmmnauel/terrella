@@ -178,41 +178,71 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .copy-button.is-copied .copy { display: none; }
 .copy-button.is-copied .check { display: block; }
 
-/* --- the story: steps on the left, one globe pinned on the right ------- */
+/* --- the story: one globe that travels, text that makes room ---------- */
 
-.story {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 0 clamp(32px, 5vw, 80px);
-  align-items: start;
+.story { position: relative; }
+
+/*
+ * The stage is pinned for the length of the story and covers the viewport.
+ * The globe inside it is moved and scaled by GSAP as the reader scrolls,
+ * from one side to the other, down to the centre, up again. Not position:
+ * sticky: the page is scrolled by translating its content, and sticky has
+ * nothing to stick to inside a transformed box.
+ */
+.stage {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  pointer-events: none;
 }
 
-.steps { order: 1; }
-
-/* Pinned by ScrollTrigger for the length of the story. Not position:
-   sticky: the page is scrolled by translating its content, and sticky has
-   nothing to stick to inside a transformed box. */
-.stage {
-  order: 2;
+/* The steps scroll over the pinned stage; each one's text is placed on the
+   side the globe is not, so the two share the viewport rather than fight. */
+.steps {
   position: relative;
-  height: 100vh;
-  display: grid;
-  place-items: center;
+  z-index: 2;
+  margin-top: -100vh;
+  pointer-events: none;
 }
 
 .step {
   min-height: 88vh;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 12vh 0;
-  max-width: 44ch;
+  align-items: center;
+  padding: 8vh 0;
 }
+/* A scene holds: the box is taller by --scene-length, the text starts at
+   --pin-top and is pinned there by ScrollTrigger while the globe plays. */
+:root { --pin-top: 28vh; }
+.step[data-scene] {
+  align-items: flex-start;
+  min-height: calc(88vh + var(--scene-length, 200vh));
+  padding-top: var(--pin-top);
+}
+/* With the globe below the text, the text pins higher to leave it room. */
+.step[data-scene][data-layout="low"] { --pin-top: 14vh; padding-top: var(--pin-top); }
+.step-inner {
+  width: min(44ch, 46%);
+  pointer-events: auto;
+}
+/* Globe on the right: text keeps to the left. */
+.step[data-layout="right"] .step-inner,
+.step[data-layout="gallery"] .step-inner,
+.step[data-layout="wide"] .step-inner { margin-right: auto; }
+/* Globe on the left: text moves to the right. */
+.step[data-layout="left"] .step-inner { margin-left: auto; }
+/* Globe low in the centre: text sits above it. */
+.step[data-layout="low"] { align-items: flex-start; padding-top: 4vh; }
+.step[data-layout="low"] .step-inner { width: min(52ch, 62%); margin: 0 auto; }
+/* Globe high in the centre: text sits below it. */
+.step[data-layout="high"] { align-items: flex-end; padding-bottom: 6vh; }
+.step[data-layout="high"] .step-inner { width: min(52ch, 62%); margin: 0 auto; }
+
 .step--hero {
   min-height: calc(100vh - var(--header));
-  max-width: none;
-  padding-top: 6vh;
+  padding-top: 4vh;
 }
+.step--hero .step-inner { width: 50%; }
 
 .step-index {
   display: block;
@@ -284,10 +314,18 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 
 /* --- the orrery: globe, ring and readout -------------------------------- */
 
+:root { --globe: min(40vw, calc(100vh - 180px)); }
+
+/* Centred in the stage by default; GSAP adds the travel on top. */
 .orrery {
-  position: relative;
-  width: min(100%, calc(100vh - 128px));
-  aspect-ratio: 1;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--globe);
+  height: var(--globe);
+  margin: calc(var(--globe) / -2) 0 0 calc(var(--globe) / -2);
+  pointer-events: auto;
+  will-change: transform;
 }
 
 .ring {
@@ -330,11 +368,14 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .readout b { font-weight: 400; color: var(--ink); }
 
 @media (max-width: 900px) {
-  .story { grid-template-columns: minmax(0, 1fr); }
+  /* Narrow screens do not travel: the globe sits at the top and the text
+     scrolls beneath it. */
   .stage {
-    order: 1;
+    z-index: 3;
     height: 46vh;
-    z-index: 1;
+    display: grid;
+    place-items: center;
+    pointer-events: auto;
   }
   /* The paper behind the pinned globe reaches across the gutters, so text
      sliding underneath cannot show at the viewport edge. */
@@ -356,12 +397,108 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
     background: linear-gradient(var(--paper), transparent);
     pointer-events: none;
   }
-  .steps { order: 2; position: relative; }
-  .step { min-height: 0; padding: 12vh 0; max-width: none; }
+  :root { --pin-top: 52vh; }
+  .steps { margin-top: 0; }
+  .step { min-height: 0; padding: 12vh 0; }
+  .step[data-scene],
+  .step[data-scene][data-layout="low"] {
+    --pin-top: 52vh;
+    min-height: var(--scene-length, 200vh);
+    padding-top: var(--pin-top);
+  }
+  .step-inner,
+  .step[data-layout] .step-inner,
+  .step--hero .step-inner { width: auto; margin: 0; }
   .step--hero { min-height: 0; padding-top: 6vh; }
   /* Narrower than the column so the ring around it stays inside the gutter. */
-  .orrery { width: min(86%, calc(46vh - 56px)); }
+  .orrery {
+    position: relative;
+    left: auto;
+    top: auto;
+    margin: 0;
+    width: min(86%, calc(46vh - 56px));
+    height: auto;
+    aspect-ratio: 1;
+    transform: none !important;
+  }
   .readout { display: none; }
+}
+
+/* --- comparison ------------------------------------------------------ */
+
+.compare-scroll {
+  margin-top: clamp(32px, 4vw, 48px);
+  overflow-x: auto;
+}
+.compare {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.compare th,
+.compare td {
+  padding: 13px 16px 13px 0;
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+  vertical-align: top;
+}
+.compare thead th {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--ink);
+  font: 500 14px/1.3 var(--sans);
+}
+.compare thead th:first-child { font: 12px/1.3 var(--mono); color: var(--ink-3); }
+.compare tbody th { font-weight: 400; color: var(--ink-2); width: 24%; }
+.compare td { color: var(--ink-2); width: 19%; }
+/* The first library column is the one this page is about. */
+.compare td:nth-child(2) { color: var(--ink); font-weight: 500; }
+.compare-note {
+  margin-top: 28px;
+  max-width: 62ch;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.compare-source { margin-top: 12px; font: 12px/1.5 var(--mono); color: var(--ink-3); }
+
+/* --- the style gallery: a row of globes that slides under the text ------ */
+
+.style-row {
+  --cell: calc(var(--globe) * 0.56);
+  position: absolute;
+  /* `left` is set by the script to the viewport's centre. */
+  top: calc(74vh - var(--pin-top) - var(--cell) / 2);
+  display: flex;
+  gap: 48px;
+  will-change: transform;
+}
+/* The first slot holds only a caption: the main globe sits in it. */
+.style-cell--main .style-globe { visibility: hidden; }
+.style-cell {
+  flex: none;
+  width: var(--cell);
+  margin: 0;
+  text-align: center;
+}
+/* Drawn at the main globe's full size and scaled by the same factor, so the
+   seven are pixel for pixel alike and the swap at the end is invisible. */
+.style-globe {
+  position: relative;
+  width: var(--globe);
+  height: var(--globe);
+  margin-bottom: calc(var(--cell) - var(--globe));
+  transform: scale(0.56);
+  transform-origin: 0 0;
+}
+.style-cell figcaption {
+  margin-top: 14px;
+  font: 12px/1 var(--mono);
+  color: var(--ink-3);
+}
+.style-cell .style-globe canvas { display: block; width: 100%; }
+@media (max-width: 900px) {
+  .style-row { display: none; }
 }
 
 /* --- closing: the API, as a list ---------------------------------------- */
@@ -422,7 +559,8 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .code-pair { margin-top: 28px; }
 .code-pair [role="tabpanel"] { position: relative; }
 .code-pair [role="tabpanel"][hidden] { display: none; }
-.code-pair .copy-button { position: absolute; top: 0; right: 0; }
+/* On the tab row, clear of the first line of code however narrow the panel. */
+.code-pair .copy-button { position: absolute; top: -69px; right: 0; }
 .code-pair pre {
   padding-left: 18px;
   border-left: 1px solid var(--ink);

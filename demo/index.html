@@ -118,7 +118,7 @@
   const $ = (selector) => document.querySelector(selector);
 
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
-  if (!reduced) ScrollSmoother.create({ smooth: 1.1, effects: false, normalizeScroll: true });
+  if (!reduced) ScrollSmoother.create({ smooth: 0.8, effects: false, normalizeScroll: false });
 
   const theme = window.TERRELLA_THEME;
   const base = () => (theme.current() === "dark" ? "ink" : "chart");

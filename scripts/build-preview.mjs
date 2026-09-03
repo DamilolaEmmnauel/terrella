@@ -44,7 +44,7 @@ try {
   writeFileSync(
     entry,
     [
-      `export { createGlobe as createGlobe2D } from ${JSON.stringify(join(root, "src/index.ts"))};`,
+      `export { createGlobe as createGlobe2D, countriesIn, countryName, projectionBetween, STYLE_NAMES } from ${JSON.stringify(join(root, "src/index.ts"))};`,
       `export { createGlobe as createGlobe3D } from ${JSON.stringify(join(root, "src/three/index.ts"))};`,
     ].join("\n"),
   );
