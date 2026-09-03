@@ -1,4 +1,4 @@
-import { geoPath, type GeoPermissibleObjects } from "d3-geo";
+import { geoPath, type GeoPermissibleObjects, type GeoProjection } from "d3-geo";
 import { resolveConfig } from "../config";
 import { createProjection, isFlat, readWorld, regionColors, valueColors } from "../geo";
 import { resolveStyle } from "../styles";
@@ -7,7 +7,7 @@ import { paintLabels, resolveLabels } from "../labels";
 import { paintTerminator, resolveTerminator } from "../terminator";
 import { presetFor } from "../theme";
 import { SvgContext } from "./context";
-import type { Frame, GlobeOptions, Palette, StyleName, StylePainter } from "../types";
+import type { Frame, GlobeOptions, Palette, ProjectionName, StyleName, StylePainter } from "../types";
 
 export * from "../types";
 export { SvgContext, type PaintContext } from "./context";
@@ -49,13 +49,21 @@ export function renderSVG(options: SvgOptions = {}): string {
   const height = Math.round(width * config.ratio);
   const radius = width * config.radius;
 
-  const projection = createProjection(config.projection);
-  const flat = isFlat(config.projection);
+  const custom = typeof config.projection !== "string";
+  const projection: GeoProjection = custom
+    ? (config.projection as GeoProjection)
+    : createProjection(config.projection as ProjectionName);
+  const flat = custom || isFlat(config.projection as ProjectionName);
   if (flat) {
-    projection.fitSize([width, height], { type: "Sphere" } as GeoPermissibleObjects);
+    const margin = width * (0.5 - config.radius);
+    projection.fitExtent(
+      [[margin, margin], [width - margin, height - margin]],
+      { type: "Sphere" } as GeoPermissibleObjects,
+    );
   } else {
-    projection.translate([width / 2, height / 2]).scale(radius).rotate([-config.longitude, config.tilt]);
+    projection.translate([width / 2, height / 2]).scale(radius);
   }
+  if (!flat || custom) projection.rotate([-config.longitude, config.tilt]);
 
   const ctx = new SvgContext();
   // The context is typed as the real canvas one so styles need not know

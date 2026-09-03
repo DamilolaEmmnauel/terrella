@@ -2,8 +2,12 @@ import {
   geoOrthographic,
   geoEquirectangular,
   geoNaturalEarth1,
+  geoEquirectangularRaw,
+  geoNaturalEarth1Raw,
+  geoProjection,
   geoCentroid,
   type GeoProjection,
+  type GeoRawProjection,
   type GeoPermissibleObjects,
 } from "d3-geo";
 import { feature, merge } from "topojson-client";
@@ -44,6 +48,81 @@ const FLAT: ReadonlySet<ProjectionName> = new Set<ProjectionName>([
 ]);
 
 export const isFlat = (name: ProjectionName): boolean => FLAT.has(name);
+
+/**
+ * The orthographic projection, continued past the limb.
+ *
+ * d3's orthographic folds the far hemisphere back inside the disc, which is
+ * harmless when it is clipped away and ruinous when blended with a map: the
+ * far side lands on top of the near side. This one keeps going outward past
+ * the limb instead, so as the clip opens the far side unfolds from the edge
+ * like a book. Inside the limb it is the orthographic projection exactly.
+ */
+const orthographicOpenRaw: GeoRawProjection = (lambda, phi) => {
+  const sine = Math.sin(lambda);
+  const beyond = Math.abs(lambda) > Math.PI / 2;
+  const across = beyond ? Math.sign(lambda) * (2 - Math.abs(sine)) : sine;
+  return [Math.cos(phi) * across, Math.sin(phi)];
+};
+
+const RAW: Record<ProjectionName, GeoRawProjection> = {
+  orthographic: orthographicOpenRaw,
+  equirectangular: geoEquirectangularRaw,
+  naturalEarth: geoNaturalEarth1Raw,
+};
+
+/**
+ * A projection part way between two others.
+ *
+ * At 0 it is `from`, at 1 it is `to`, and between them every point moves in
+ * a straight line from where one projection puts it to where the other
+ * does. Hand successive values to `setProjection` and a globe unrolls into
+ * a map, or a map wraps back into a globe, in whatever style is drawing it.
+ *
+ * The orthographic projection hides the far side of the world; as it opens
+ * out, the hidden angle widens until nothing is hidden. The renderer fits
+ * the result to the canvas, so no scale or translate is set here.
+ *
+ * The result carries `outline`: the same projection with no clipping, which
+ * the backdrop uses to trace the map's real edge. The hidden part of the
+ * world sits at both edges of an unrolled map, so the ocean is that outline
+ * with the hidden cap cut out of each side.
+ */
+export interface MorphProjection extends GeoProjection {
+  outline?: GeoProjection;
+}
+
+export function projectionBetween(from: ProjectionName, to: ProjectionName, t: number): MorphProjection {
+  const k = Math.max(0, Math.min(1, t));
+  const a = (RAW as Partial<Record<string, GeoRawProjection>>)[from];
+  const b = (RAW as Partial<Record<string, GeoRawProjection>>)[to];
+  if (!a || !b) throw new Error(`terrella: unknown projection "${a ? to : from}"`);
+
+  const raw: GeoRawProjection = (lambda, phi) => {
+    const [ax, ay] = a(lambda, phi);
+    const [bx, by] = b(lambda, phi);
+    return [ax + (bx - ax) * k, ay + (by - ay) * k];
+  };
+  const projection: MorphProjection = geoProjection(raw);
+
+  const clipOf = (name: ProjectionName) => (name === "orthographic" ? 90 : 180);
+  const clip = clipOf(from) + (clipOf(to) - clipOf(from)) * k;
+  if (clip < 180) {
+    projection.clipAngle(clip);
+    projection.outline = geoProjection(raw);
+  }
+  return projection;
+}
+
+/**
+ * How far from the point facing the viewer a coordinate stays visible, in
+ * radians, or null when the projection shows the whole world.
+ */
+export function visibleAngle(projection: GeoProjection): number | null {
+  // d3 reports "no clipping" as 0 rather than null.
+  const clip = projection.clipAngle();
+  return !clip ? null : (clip * Math.PI) / 180;
+}
 
 export function createProjection(name: ProjectionName): GeoProjection {
   const make = PROJECTIONS[name];

@@ -48,7 +48,17 @@ export {
 } from "./styles";
 export { DEFAULT_PALETTE, setDefaultWorld, getDefaultWorld } from "./config";
 export { DARK_PALETTE, type ThemeName } from "./theme";
-export { readWorld, sampleLandGrid, createProjection, isFlat, regionCentre, MAX_DOTS } from "./geo";
+export {
+  readWorld,
+  sampleLandGrid,
+  createProjection,
+  projectionBetween,
+  type MorphProjection,
+  visibleAngle,
+  isFlat,
+  regionCentre,
+  MAX_DOTS,
+} from "./geo";
 export { isoKey, country, countryName, countriesIn, allCountries, REGION_NAMES } from "./countries";
 export { createLandTest, type LandTest } from "./landmask";
 
@@ -83,9 +93,15 @@ export function createGlobe(
 
   let theme: ThemeName = config.theme;
   let palette: Palette = resolvePalette(theme, elementVars(element), options.palette);
-  let projectionName: ProjectionName = config.projection;
-  let projection: GeoProjection = createProjection(projectionName);
-  let flat = isFlat(projectionName);
+  // A named projection, or a d3 projection object handed in by the caller.
+  // The object is treated as a map: fitted to the canvas, and turned with
+  // the globe so a morph keeps the view it started from.
+  let projectionName: ProjectionName | null =
+    typeof config.projection === "string" ? config.projection : null;
+  let projection: GeoProjection =
+    projectionName ? createProjection(projectionName) : (config.projection as GeoProjection);
+  let custom = projectionName === null;
+  let flat = custom || isFlat(projectionName as ProjectionName);
 
   // Prepared lazily below, once the world shapes and layout exist.
   let style: PreparedStyle;
@@ -165,9 +181,13 @@ export function createGlobe(
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (flat) {
-      // fitSize lets the projection choose its own scale so the whole world
-      // lands inside the canvas whatever its aspect ratio.
-      projection.fitSize([width, height], { type: "Sphere" } as GeoPermissibleObjects);
+      // Fitted inside the same margin the sphere leaves, so a projection
+      // morphing between the two starts exactly where the sphere was.
+      const margin = width * (0.5 - config.radius);
+      projection.fitExtent(
+        [[margin, margin], [width - margin, height - margin]],
+        { type: "Sphere" } as GeoPermissibleObjects,
+      );
     } else {
       projection.translate([centreX, centreY]).scale(radius);
     }
@@ -319,7 +339,7 @@ export function createGlobe(
       if (view.done) tween = null;
     }
 
-    if (!flat) projection.rotate([-drag.longitude, tilt]);
+    if (!flat || custom) projection.rotate([-drag.longitude, tilt]);
 
     ctx.clearRect(0, 0, width, height);
 
@@ -469,6 +489,31 @@ export function createGlobe(
     frameId = requestAnimationFrame(draw);
   }
 
+  // A globe nobody can see does not need sixty frames a second. The loop
+  // stops while the canvas is off screen and picks up when it returns;
+  // setters still draw a single frame in between, so nothing goes stale.
+  let suspended = false;
+  const visibility =
+    config.pauseOffscreen && !still && typeof IntersectionObserver === "function"
+      ? new IntersectionObserver(
+          ([entry]) => {
+            if (!entry) return;
+            if (entry.isIntersecting) {
+              if (!suspended) return;
+              suspended = false;
+              lastTs = null;
+              frameId = requestAnimationFrame(draw);
+            } else if (frameId !== null) {
+              cancelAnimationFrame(frameId);
+              frameId = null;
+              suspended = true;
+            }
+          },
+          { rootMargin: "80px" },
+        )
+      : null;
+  visibility?.observe(canvas);
+
   // --- public surface -------------------------------------------------------
 
   return {
@@ -541,7 +586,7 @@ export function createGlobe(
         ...options,
         world: config.world,
         style: currentStyle,
-        projection: projectionName,
+        projection: projectionName ?? projection,
         palette,
         theme: "light",
         regions: paintedRegions,
@@ -562,9 +607,10 @@ export function createGlobe(
     },
 
     setProjection(next) {
-      projectionName = next;
-      projection = createProjection(next);
-      flat = isFlat(next);
+      projectionName = typeof next === "string" ? next : null;
+      projection = projectionName ? createProjection(projectionName) : (next as GeoProjection);
+      custom = projectionName === null;
+      flat = custom || isFlat(projectionName as ProjectionName);
       path = geoPath(projection, ctx);
       layout();
       redraw();
@@ -611,6 +657,7 @@ export function createGlobe(
       unwatchTheme?.();
       removeKeyboard?.();
       spoken?.remove();
+      visibility?.disconnect();
       if (frameId !== null) cancelAnimationFrame(frameId);
       frameId = null;
       globalThis.removeEventListener?.("resize", onResize);

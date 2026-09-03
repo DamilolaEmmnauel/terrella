@@ -1,6 +1,6 @@
 import { geoBounds, geoContains, geoDistance } from "d3-geo";
 import type { CountryFeature, Frame, LngLat, PrepareContext } from "../types";
-import { isoKey, sampleLandGrid } from "../geo";
+import { isoKey, sampleLandGrid, visibleAngle } from "../geo";
 
 /**
  * What the sampled styles share: dots, pixels, characters and stipple all
@@ -11,9 +11,6 @@ import { isoKey, sampleLandGrid } from "../geo";
  * countries, so a bounding-box prefilter turns a few hundred thousand polygon
  * tests into a few thousand. Both costs are paid once, in `prepare`.
  */
-
-/** The visible hemisphere, in radians from the point facing the viewer. */
-export const HORIZON = Math.PI / 2;
 
 /**
  * How sharply points fade in from the limb. 1 would fade the whole
@@ -70,15 +67,16 @@ export function sampleLand(context: PrepareContext, spacing: number): Sample[] {
 }
 
 /**
- * Visibility of a sample: null beyond the horizon, otherwise 0 at the limb
- * rising to 1 facing the viewer. Always 1 on a flat map.
+ * Visibility of a sample: null beyond what the projection shows, otherwise 0
+ * at the edge rising to 1 facing the viewer. Always 1 on a flat map.
  */
 export function visibility(frame: Frame, at: LngLat): number | null {
-  if (frame.flat) return 1;
+  const limit = visibleAngle(frame.projection);
+  if (limit === null) return 1;
   const [lambda = 0, phi = 0] = frame.projection.rotate();
   const angle = geoDistance(at, [-lambda, -phi]);
-  if (angle > HORIZON) return null;
-  return 1 - angle / HORIZON;
+  if (angle > limit) return null;
+  return 1 - angle / limit;
 }
 
 /**

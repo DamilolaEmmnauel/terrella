@@ -98,3 +98,20 @@ describe("renderSVG", () => {
     expect(svg).toContain('fill="rgb(255, 0, 0)"');
   });
 });
+
+describe("renderSVG with a projection object", async () => {
+  const { projectionBetween } = await import("../src/geo");
+
+  it("draws a globe part way unrolled", () => {
+    const svg = renderSVG({
+      world,
+      projection: projectionBetween("orthographic", "naturalEarth", 0.5),
+      markers: [{ name: "Manila", coords: [121, 14.6] }],
+      longitude: 110,
+      width: 300,
+    });
+    // The sphere outline, the land fill and stroke, and the marker's dot and ring.
+    expect((svg.match(/<path /g) ?? []).length).toBeGreaterThanOrEqual(5);
+    expect(svg).toContain("A"); // the marker, drawn as arcs
+  });
+});

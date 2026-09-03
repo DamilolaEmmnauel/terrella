@@ -1,6 +1,7 @@
 import { geoDistance, geoInterpolate, type GeoProjection } from "d3-geo";
 import type { Arc, Frame, LngLat, Marker } from "./types";
 import { contrastWith } from "./color";
+import { visibleAngle } from "./geo";
 
 /**
  * What is drawn on top of every style: markers and arcs.
@@ -10,19 +11,19 @@ import { contrastWith } from "./color";
  * reimplement them to get them.
  */
 
-/** How far from the facing point a feature stays visible, in radians. */
-const HORIZON = Math.PI / 2;
-
 /**
- * True when a point is on the visible half of the sphere.
+ * True when a point is on the visible part of the world.
  *
  * Orthographic projects far-side coordinates too rather than returning null,
  * so without this markers appear mirrored on the wrong side of the globe.
+ * The visible part is whatever the projection clips to, so a globe part way
+ * through unrolling into a map reveals its markers as it opens.
  */
-function onNearSide(at: LngLat, projection: GeoProjection, flat: boolean): boolean {
-  if (flat) return true;
+function onNearSide(at: LngLat, projection: GeoProjection): boolean {
+  const limit = visibleAngle(projection);
+  if (limit === null) return true;
   const [lambda = 0, phi = 0] = projection.rotate();
-  return geoDistance(at, [-lambda, -phi]) < HORIZON;
+  return geoDistance(at, [-lambda, -phi]) < limit;
 }
 
 /**
@@ -36,12 +37,12 @@ export function paintMarkers(
   markers: Marker[],
   pulseMs: number,
 ): Array<[number, number] | null> {
-  const { ctx, projection, palette, flat, time } = frame;
+  const { ctx, projection, palette, time } = frame;
   const positions: Array<[number, number] | null> = [];
   const pulse = pulseMs > 0 ? (time % pulseMs) / pulseMs : 0;
 
   for (const marker of markers) {
-    if (!onNearSide(marker.coords, projection, flat)) {
+    if (!onNearSide(marker.coords, projection)) {
       positions.push(null);
       continue;
     }
@@ -109,7 +110,7 @@ export function paintHover(frame: Frame): void {
  * sphere instead of following its surface.
  */
 export function paintArcs(frame: Frame, arcs: Arc[]): void {
-  const { ctx, projection, palette, flat } = frame;
+  const { ctx, projection, palette } = frame;
   const STEPS = 48;
 
   for (const arc of arcs) {
@@ -125,7 +126,7 @@ export function paintArcs(frame: Frame, arcs: Arc[]): void {
 
       // Lifting the pen at the horizon keeps an arc that passes behind the
       // globe from being drawn straight across the front of it.
-      if (!onNearSide(at, projection, flat)) {
+      if (!onNearSide(at, projection)) {
         drawing = false;
         continue;
       }

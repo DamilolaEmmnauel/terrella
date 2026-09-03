@@ -215,3 +215,58 @@ describe("valueColors", async () => {
     expect(valueColors(null, undefined, DEFAULT_PALETTE).size).toBe(0);
   });
 });
+
+describe("projectionBetween", async () => {
+  const { projectionBetween, visibleAngle } = await import("../src/geo");
+  const { geoOrthographic, geoNaturalEarth1 } = await import("d3-geo");
+  const same = (p: { scale: (k: number) => unknown; translate: (t: [number, number]) => unknown }) => {
+    p.scale(100);
+    p.translate([0, 0]);
+    return p as unknown as (at: [number, number]) => [number, number] | null;
+  };
+
+  it("is the first projection at 0 and the second at 1", () => {
+    const at: [number, number] = [10, 20];
+    expect(same(projectionBetween("orthographic", "naturalEarth", 0))(at)).toEqual(same(geoOrthographic())(at));
+    const flat = same(projectionBetween("orthographic", "naturalEarth", 1))(at);
+    const target = same(geoNaturalEarth1())(at);
+    expect(flat?.[0]).toBeCloseTo(target?.[0] ?? NaN, 6);
+    expect(flat?.[1]).toBeCloseTo(target?.[1] ?? NaN, 6);
+  });
+
+  it("puts a point halfway between at 0.5", () => {
+    const at: [number, number] = [10, 20];
+    const a = same(projectionBetween("orthographic", "naturalEarth", 0))(at) ?? [0, 0];
+    const b = same(projectionBetween("orthographic", "naturalEarth", 1))(at) ?? [0, 0];
+    const mid = same(projectionBetween("orthographic", "naturalEarth", 0.5))(at) ?? [0, 0];
+    expect(mid[0]).toBeCloseTo((a[0] + b[0]) / 2, 6);
+    expect(mid[1]).toBeCloseTo((a[1] + b[1]) / 2, 6);
+  });
+
+  it("opens the hidden hemisphere as it unrolls", () => {
+    expect(visibleAngle(projectionBetween("orthographic", "naturalEarth", 0))).toBeCloseTo(Math.PI / 2);
+    expect(visibleAngle(projectionBetween("orthographic", "naturalEarth", 0.5))).toBeCloseTo((135 * Math.PI) / 180);
+    expect(visibleAngle(projectionBetween("orthographic", "naturalEarth", 1))).toBeNull();
+    expect(visibleAngle(geoNaturalEarth1())).toBeNull();
+  });
+
+  it("carries an unclipped outline while part way, and none when open", () => {
+    expect(projectionBetween("orthographic", "naturalEarth", 0.5).outline?.clipAngle()).toBeFalsy();
+    expect(projectionBetween("orthographic", "naturalEarth", 1).outline).toBeUndefined();
+  });
+
+  it("continues past the limb instead of folding back", () => {
+    // d3's orthographic puts a point 100 degrees round at the same x as one
+    // 80 degrees round; the morph's version keeps it outside the limb.
+    const p = same(projectionBetween("orthographic", "naturalEarth", 0));
+    const near = p([80, 0]) ?? [0, 0];
+    const far = p([100, 0]) ?? [0, 0];
+    expect(far[0]).toBeGreaterThan(near[0]);
+    expect(p([90, 0])?.[0]).toBeCloseTo(100, 6);
+  });
+
+  it("refuses an unknown name", () => {
+    // @ts-expect-error deliberately wrong
+    expect(() => projectionBetween("orthographic", "mercator", 0.5)).toThrow(/unknown projection/);
+  });
+});

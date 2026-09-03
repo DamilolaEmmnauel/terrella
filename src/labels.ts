@@ -1,6 +1,7 @@
 import { geoCentroid, geoDistance, type GeoProjection } from "d3-geo";
 import type { CountryFeature, Frame, LabelOptions, LngLat, Marker, Region } from "./types";
 import { isoKey, countryName } from "./countries";
+import { visibleAngle } from "./geo";
 import { contrastWith } from "./color";
 
 /**
@@ -20,8 +21,6 @@ export interface LabelState {
   font?: string;
   color?: string;
 }
-
-const HORIZON = Math.PI / 2;
 
 export function resolveLabels(
   option: boolean | LabelOptions | undefined,
@@ -54,14 +53,15 @@ export function resolveLabels(
   };
 }
 
-/** Visibility of a point: 0 beyond the horizon, rising to 1 facing the viewer. */
-function nearness(at: LngLat, projection: GeoProjection, flat: boolean): number {
-  if (flat) return 1;
+/** Visibility of a point: 0 beyond what the projection shows, rising to 1 facing the viewer. */
+function nearness(at: LngLat, projection: GeoProjection): number {
+  const limit = visibleAngle(projection);
+  if (limit === null) return 1;
   const [lambda = 0, phi = 0] = projection.rotate();
   const angle = geoDistance(at, [-lambda, -phi]);
-  if (angle >= HORIZON) return 0;
+  if (angle >= limit) return 0;
   // Fade over the outer third so a name never sits foreshortened on the limb.
-  return Math.min(1, (1 - angle / HORIZON) * 3);
+  return Math.min(1, (1 - angle / limit) * 3);
 }
 
 function haloText(frame: Frame, text: string, x: number, y: number, color: string): void {
@@ -81,7 +81,7 @@ export function paintLabels(
   markers: Marker[],
   markerPositions: Array<[number, number] | null>,
 ): void {
-  const { ctx, projection, palette, flat, radius } = frame;
+  const { ctx, projection, palette, radius } = frame;
   const size = Math.max(10, Math.min(14, radius / 28));
   ctx.font = state.font ?? `500 ${size}px system-ui, sans-serif`;
   ctx.textBaseline = "middle";
@@ -90,7 +90,7 @@ export function paintLabels(
 
   ctx.textAlign = "center";
   for (const label of state.countries) {
-    const visible = nearness(label.at, projection, flat);
+    const visible = nearness(label.at, projection);
     if (visible <= 0) continue;
     const xy = projection(label.at);
     if (!xy) continue;
@@ -103,7 +103,7 @@ export function paintLabels(
     markers.forEach((marker, i) => {
       const at = markerPositions[i];
       if (!at) return;
-      ctx.globalAlpha = nearness(marker.coords, projection, flat);
+      ctx.globalAlpha = nearness(marker.coords, projection);
       haloText(frame, marker.name, at[0] + (marker.size ?? 4.5) + 5, at[1], marker.color ?? palette.marker);
     });
   }

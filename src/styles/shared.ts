@@ -1,4 +1,6 @@
+import { geoCircle, geoPath, type GeoPermissibleObjects } from "d3-geo";
 import type { Frame } from "../types";
+import { visibleAngle, type MorphProjection } from "../geo";
 
 /**
  * Painting every style needs.
@@ -21,10 +23,38 @@ export function paintBackdrop(frame: Frame): void {
     // The projected sphere, not the whole canvas: a flat projection rarely
     // fills its box, and painting the box makes the empty margin above and
     // below the map look like ocean that is part of the world.
+    const limit = visibleAngle(frame.projection);
+    const outline = (frame.projection as MorphProjection).outline;
     ctx.beginPath();
-    frame.path({ type: "Sphere" } as never);
+    if (limit === null || !outline) {
+      frame.path({ type: "Sphere" } as never);
+      ctx.fillStyle = palette.ocean;
+      ctx.fill();
+      return;
+    }
+
+    // A globe part way through unrolling still hides a cap of the world
+    // around the point facing away. The map's edge comes from the unclipped
+    // twin; the hidden cap, which lies half at each edge of the map, is then
+    // cut out of it.
+    outline
+      .scale(frame.projection.scale())
+      .translate(frame.projection.translate())
+      .rotate(frame.projection.rotate());
+    geoPath(outline, ctx)({ type: "Sphere" } as GeoPermissibleObjects);
     ctx.fillStyle = palette.ocean;
     ctx.fill();
+
+    const [lambda = 0, phi = 0] = frame.projection.rotate();
+    const hidden = geoCircle()
+      .center([180 - lambda, phi])
+      .radius(180 - (limit * 180) / Math.PI)();
+    ctx.save();
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.beginPath();
+    geoPath(outline, ctx)(hidden);
+    ctx.fill();
+    ctx.restore();
     return;
   }
 

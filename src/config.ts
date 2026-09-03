@@ -39,6 +39,7 @@ export const DEFAULTS: GlobeDefaults = {
   tooltips: true,
   pulseMs: 1600,
   respectReducedMotion: true,
+  pauseOffscreen: true,
   dotSpacing: 2.2,
   dotSize: 1.1,
 };
@@ -57,6 +58,7 @@ export interface GlobeDefaults {
   tooltips: boolean;
   pulseMs: number;
   respectReducedMotion: boolean;
+  pauseOffscreen: boolean;
   dotSpacing: number;
   dotSize: number;
 }

@@ -217,8 +217,12 @@ export interface GlobeOptions {
 
   /** Which look to draw. Defaults to "solid". */
   style?: StyleName | StylePainter;
-  /** Which map projection. Defaults to "orthographic". */
-  projection?: ProjectionName;
+  /**
+   * Which map projection. Defaults to "orthographic". A d3 projection object
+   * is accepted too, such as one from `projectionBetween`; it is fitted to the
+   * canvas with the same margin as a flat map and turned with the globe.
+   */
+  projection?: ProjectionName | GeoProjection;
 
   regions?: Region[];
   markers?: Marker[];
@@ -260,6 +264,8 @@ export interface GlobeOptions {
   pulseMs?: number;
   /** Draw a single still frame when the user has asked for reduced motion. */
   respectReducedMotion?: boolean;
+  /** Stop the render loop while the canvas is off screen. On by default. */
+  pauseOffscreen?: boolean;
 
   /**
    * Names on the globe. `true` labels every marker and every country in a
@@ -351,7 +357,7 @@ export interface GlobeInstance {
   /** Swaps the render style without rebuilding the globe. */
   setStyle: (style: StyleName | StylePainter) => void;
   /** Swaps the projection without rebuilding the globe. */
-  setProjection: (projection: ProjectionName) => void;
+  setProjection: (projection: ProjectionName | GeoProjection) => void;
   /** Merges new colours into the palette. */
   setPalette: (palette: Partial<Palette>) => void;
   /** Changes ambient rotation without touching anything else. */
