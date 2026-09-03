@@ -1,6 +1,6 @@
 {
   "name": "terrella",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "An interactive globe for the web. Highlight countries and regions, place markers, choose a render style.",
   "keywords": [
     "globe",
