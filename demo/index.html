@@ -4,247 +4,249 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>terrella</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Instrument+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="../dist/terrella.css">
-<style>
-  :root {
-    --ink: #16202b;
-    --ink-soft: #5b6b7c;
-    --line: #e2e8ef;
-    --bg: #ffffff;
-    --panel: #f7f9fb;
-    --accent: #1769a8;
-    --radius: 10px;
-  }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
-    font: 16px/1.55 ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 32px 80px; }
-
-  header { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 40px; }
-  h1 { font-size: 30px; letter-spacing: -0.02em; margin: 0 0 8px; }
-  .tagline { color: var(--ink-soft); margin: 0; max-width: 60ch; }
-  .note { color: var(--ink-soft); font-size: 14px; margin: 14px 0 0; max-width: 66ch; }
-
-  .stage { display: grid; grid-template-columns: 1fr 260px; gap: 40px; align-items: start; }
-  @media (max-width: 820px) { .stage { grid-template-columns: 1fr; } }
-
-  /* Capped so the sphere fits the viewport rather than running off the fold. */
-  #globe { position: relative; width: 100%; max-width: 520px; margin: 0 auto; }
-
-  .panel {
-    border: 1px solid var(--line);
-    border-radius: var(--radius);
-    background: var(--panel);
-    padding: 20px;
-  }
-  .field { margin-bottom: 20px; }
-  .field:last-child { margin-bottom: 0; }
-  .label {
-    display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.07em;
-    color: var(--ink-soft);
-    margin-bottom: 8px;
-  }
-  select {
-    width: 100%;
-    padding: 7px 9px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    background: var(--bg);
-    color: inherit;
-    font: inherit;
-    font-size: 14px;
-  }
-  .segmented { display: flex; gap: 6px; flex-wrap: wrap; }
-  .segmented button {
-    flex: 1 1 auto;
-    padding: 7px 10px;
-    border: 1px solid var(--line);
-    border-radius: 7px;
-    background: var(--bg);
-    color: var(--ink-soft);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .segmented button[aria-pressed="true"] {
-    border-color: var(--accent);
-    color: var(--accent);
-    font-weight: 600;
-  }
-  .readout {
-    border-top: 1px solid var(--line);
-    padding-top: 14px;
-    font-size: 13px;
-    color: var(--ink-soft);
-    font-variant-numeric: tabular-nums;
-  }
-</style>
+<link rel="stylesheet" href="./demo.css">
+<script src="./demo-theme.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <h1>terrella</h1>
-    <p class="tagline">
-      An interactive globe for the web. Highlight countries and regions, place
-      markers, and pick the look. Drag to spin, flick to throw, hover a marker
-      for its local time.
-    </p>
-    <p class="note">
-      A terrella is a small model of the Earth. William Gilbert built one in
-      1600 to study magnetism, which is roughly what this is: a small model of
-      the world you can hold and turn.
-    </p>
-  </header>
+<div id="smooth-wrapper">
+<div id="smooth-content">
 
-  <div class="stage">
-    <div id="globe"></div>
+<header class="site-header">
+  <div class="container">
+    <a class="wordmark" href="./">terrella <span class="version">v0.3.0</span></a>
+    <nav class="site-nav" aria-label="Pages">
+      <a href="./" aria-current="true">2D canvas</a>
+      <a href="./three.html">three.js</a>
+      <a href="https://github.com/DamilolaEmmnauel/terrella">GitHub</a>
+      <button class="theme-toggle" type="button" id="theme-toggle">Dark</button>
+    </nav>
+  </div>
+</header>
 
-    <div class="panel">
-      <div class="field">
-        <span class="label">Style</span>
-        <div class="segmented" id="styles">
-          <button data-style="solid" aria-pressed="true">Solid</button>
-          <button data-style="dots" aria-pressed="false">Dots</button>
-          <button data-style="wireframe" aria-pressed="false">Wire</button>
+<main>
+  <section class="section container">
+    <div class="playground">
+      <div>
+        <h1 class="section-title">The 2D canvas renderer.</h1>
+        <p class="section-lede">
+          Drag to spin, flick to throw, hover a marker for its local time. Every
+          control is a single call on the instance.
+        </p>
+        <div class="playground-stage">
+          <div class="orrery" id="orrery">
+            <div class="globe-layer" id="globe"></div>
+            <div class="readout" aria-live="off">
+              <span>lon <b id="r-longitude">0.00&deg;</b></span>
+              <span>hover <b id="r-hover">none</b></span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="field">
-        <span class="label">Projection</span>
-        <div class="segmented" id="projections">
-          <button data-projection="orthographic" aria-pressed="true">Globe</button>
-          <button data-projection="naturalEarth" aria-pressed="false">Flat</button>
+      <div class="playground-controls">
+        <div class="control">
+          <span class="control-label" id="l-style">style</span>
+          <div class="segmented" role="group" aria-labelledby="l-style" id="c-style"></div>
         </div>
-      </div>
 
-      <div class="field">
-        <label class="label" for="region">Focus a region</label>
-        <select id="region">
-          <option value="">All regions, drifting</option>
-          <option value="africa">Africa</option>
-          <option value="sea">Southeast Asia</option>
-          <option value="latam">Latin America</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <span class="label">Palette</span>
-        <div class="segmented" id="palettes">
-          <button data-palette="default" aria-pressed="true">Default</button>
-          <button data-palette="slate" aria-pressed="false">Slate</button>
-          <button data-palette="warm" aria-pressed="false">Warm</button>
+        <div class="control">
+          <span class="control-label" id="l-projection">projection</span>
+          <div class="segmented" role="group" aria-labelledby="l-projection" id="c-projection">
+            <button type="button" data-projection="orthographic" aria-pressed="true">Globe</button>
+            <button type="button" data-projection="naturalEarth" aria-pressed="false">Flat</button>
+          </div>
         </div>
-      </div>
 
-      <div class="readout">
-        <div id="lon">Longitude 0.00&deg;</div>
-        <div id="hover">Hovering nothing</div>
+        <div class="control">
+          <label class="control-label" for="c-region">focus</label>
+          <div class="select">
+            <select id="c-region">
+              <option value="">None, drifting</option>
+              <option value="africa">Africa</option>
+              <option value="sea">Southeast Asia</option>
+              <option value="latam">Latin America</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <div class="control">
+          <span class="control-label" id="l-palette">palette</span>
+          <div class="swatches" role="group" aria-labelledby="l-palette" id="c-palette"></div>
+        </div>
+
+        <div class="playground-code">
+          <span class="control-label">equivalent code</span>
+          <pre><code id="live-code"></code></pre>
+        </div>
       </div>
     </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <span>MIT &copy; 2026 <a href="https://github.com/DamilolaEmmnauel">Damilola Akinosun</a></span>
+    <span data-live>renderer: 2D canvas</span>
   </div>
+</footer>
+
+</div>
 </div>
 
+<script src="../node_modules/gsap/dist/gsap.min.js"></script>
+<script src="../node_modules/gsap/dist/ScrollTrigger.min.js"></script>
+<script src="../node_modules/gsap/dist/ScrollSmoother.min.js"></script>
+<script src="./demo-data.js"></script>
 <script src="../dist/terrella.global.js"></script>
 <script>
 (async () => {
+  "use strict";
+
   const world = await (await fetch("../data/countries-110m.json")).json();
+  const { REGIONS, MARKERS, PALETTES, ringMarkup } = window.TERRELLA_DEMO;
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $ = (selector) => document.querySelector(selector);
 
-  const regions = [
-    {
-      id: "africa",
-      name: "Africa",
-      countries: [12, 24, 72, 108, 120, 140, 148, 178, 180, 204, 226, 231, 232, 262,
-                  266, 270, 288, 324, 384, 404, 426, 430, 434, 450, 454, 466, 478,
-                  480, 504, 508, 516, 562, 566, 624, 646, 686, 690, 694, 706, 710,
-                  716, 728, 729, 748, 768, 788, 800, 818, 834, 854, 894],
-      highlight: [566, 404, 710],
-    },
-    {
-      id: "sea",
-      name: "Southeast Asia",
-      countries: [96, 104, 116, 360, 418, 458, 608, 626, 702, 704],
-      highlight: [608, 360, 704],
-    },
-    {
-      id: "latam",
-      name: "Latin America",
-      countries: [32, 68, 76, 152, 170, 188, 214, 218, 222, 320, 340, 484, 558,
-                  591, 600, 604, 858, 862],
-      highlight: [76, 484, 170],
-    },
-  ];
+  gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
+  if (!reduced) ScrollSmoother.create({ smooth: 1.1, effects: false, normalizeScroll: true });
 
-  const markers = [
-    { name: "Lagos", coords: [3.4, 6.5], country: 566, timezone: "Africa/Lagos" },
-    { name: "Nairobi", coords: [36.8, -1.3], country: 404, timezone: "Africa/Nairobi" },
-    { name: "Johannesburg", coords: [28.0, -26.2], country: 710, timezone: "Africa/Johannesburg" },
-    { name: "Manila", coords: [121.0, 14.6], country: 608, timezone: "Asia/Manila" },
-    { name: "Jakarta", coords: [106.8, -6.2], country: 360, timezone: "Asia/Jakarta" },
-    { name: "Hanoi", coords: [105.8, 21.0], country: 704, timezone: "Asia/Ho_Chi_Minh" },
-    { name: "Bogota", coords: [-74.1, 4.7], country: 170, timezone: "America/Bogota" },
-    { name: "Sao Paulo", coords: [-46.6, -23.5], country: 76, timezone: "America/Sao_Paulo" },
-    { name: "Mexico City", coords: [-99.1, 19.4], country: 484, timezone: "America/Mexico_City" },
-  ];
-
-  const PALETTES = {
-    default: {},
-    slate: {
-      ocean: "#f1f4f7", land: "#c6ced8", border: "#ffffff",
-      region: "#98a7b8", highlight: "#3c5570", marker: "#22303f",
-      rim: "rgba(30, 41, 54, 0.12)",
-    },
-    warm: {
-      ocean: "#fbf5ee", land: "#e3d3c1", border: "#fffaf4",
-      region: "#dcb894", highlight: "#b4682c", marker: "#8a4419",
-      rim: "rgba(102, 66, 38, 0.12)",
-    },
+  const theme = window.TERRELLA_THEME;
+  const base = () => (theme.current() === "dark" ? "ink" : "chart");
+  /**
+   * The controls live in the URL hash, so a configured globe is a link:
+   *   demo/#style=dots&projection=naturalEarth&region=sea&palette=ink
+   */
+  const fromUrl = new URLSearchParams(location.hash.slice(1));
+  const state = {
+    style: fromUrl.get("style") || "solid",
+    projection: fromUrl.get("projection") || "orthographic",
+    region: fromUrl.get("region") || "",
+    palette: fromUrl.get("palette") || base(),
   };
+  function writeUrl() {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(state)) if (value) params.set(key, value);
+    history.replaceState(null, "", `#${params}`);
+  }
 
-  const globe = terrella.createGlobe(document.querySelector("#globe"), {
-    world,
-    regions,
-    markers,
-    onMarkerHover: (m) => {
-      document.querySelector("#hover").textContent =
-        m ? `Hovering ${m.name}` : "Hovering nothing";
-    },
+  const orrery = $("#orrery");
+  orrery.insertAdjacentHTML("afterbegin", ringMarkup());
+  const ring = orrery.querySelector(".ring");
+
+  const globe = terrella.createGlobe($("#globe"), {
+    world, regions: REGIONS, markers: MARKERS,
+    style: state.style,
+    projection: state.projection,
+    palette: PALETTES[state.palette].colors,
+    labels: { markers: true },
+    onMarkerHover: (m) => { $("#r-hover").textContent = m ? m.name : "none"; },
+    onCountryHover: (c) => { $("#r-hover").textContent = c ? c.name : "none"; },
   });
+  if (state.region) globe.focus(state.region, { duration: 0 });
+  if (state.projection !== "orthographic") ring.style.opacity = "0";
 
-  const lon = document.querySelector("#lon");
+  const styleHost = $("#c-style");
+  for (const name of terrella.STYLE_NAMES) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.style = name;
+    button.setAttribute("aria-pressed", String(name === state.style));
+    button.textContent = name[0].toUpperCase() + name.slice(1);
+    styleHost.appendChild(button);
+  }
+  for (const button of document.querySelectorAll("#c-projection button")) {
+    button.setAttribute("aria-pressed", String(button.dataset.projection === state.projection));
+  }
+  $("#c-region").value = state.region;
+
   setInterval(() => {
-    lon.textContent = `Longitude ${globe.longitude.toFixed(2)}°`;
-  }, 100);
+    $("#r-longitude").textContent = `${globe.longitude.toFixed(2)}°`;
+  }, 120);
 
-  function wireGroup(id, attribute, apply) {
-    const group = document.querySelector(id);
+  function renderCode() {
+    const lines = [`const globe = createGlobe(el, {`, `  world,`];
+    if (state.style !== "solid") lines.push(`  style: "${state.style}",`);
+    if (state.projection !== "orthographic") lines.push(`  projection: "${state.projection}",`);
+    if (state.palette !== base()) lines.push(`  palette: ${state.palette}Palette,`);
+    lines.push(`  regions, markers,`, `});`);
+    if (state.region) lines.push(``, `globe.focus("${state.region}");`);
+    $("#live-code").textContent = lines.join("\n");
+  }
+
+  function wireGroup(id, key, apply) {
+    const group = $(id);
     group.addEventListener("click", (event) => {
       const button = event.target.closest("button");
       if (!button) return;
-      for (const b of group.querySelectorAll("button")) {
-        b.setAttribute("aria-pressed", String(b === button));
+      for (const other of group.querySelectorAll("button")) {
+        other.setAttribute("aria-pressed", String(other === button));
       }
-      apply(button.dataset[attribute]);
+      state[key] = button.dataset[key];
+      apply(state[key]);
+      renderCode();
+      writeUrl();
     });
   }
 
-  wireGroup("#styles", "style", (v) => globe.setStyle(v));
-  wireGroup("#projections", "projection", (v) => globe.setProjection(v));
-  wireGroup("#palettes", "palette", (v) => globe.setPalette(PALETTES[v]));
+  const paletteHost = $("#c-palette");
+  for (const [id, palette] of Object.entries(PALETTES)) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.palette = id;
+    button.setAttribute("aria-pressed", String(id === state.palette));
+    button.innerHTML = `<span class="chip" style="background:${palette.swatch}" aria-hidden="true"></span>${palette.label}`;
+    paletteHost.appendChild(button);
+  }
 
-  document.querySelector("#region").addEventListener("change", (event) => {
-    globe.focus(event.target.value || null);
+  wireGroup("#c-style", "style", (v) => globe.setStyle(v));
+  wireGroup("#c-projection", "projection", (v) => {
+    globe.setProjection(v);
+    // The ring is a meridian; it means nothing around a flat map.
+    gsap.to(ring, { opacity: v === "orthographic" ? 1 : 0, duration: reduced ? 0 : 0.4 });
   });
+  wireGroup("#c-palette", "palette", (v) => globe.setPalette(PALETTES[v].colors));
+
+  $("#c-region").addEventListener("change", (event) => {
+    state.region = event.target.value;
+    globe.focus(state.region || null);
+    renderCode();
+    writeUrl();
+  });
+
+  renderCode();
+
+  const toggle = $("#theme-toggle");
+  const labelToggle = () => { toggle.textContent = theme.current() === "dark" ? "Light" : "Dark"; };
+  labelToggle();
+  toggle.addEventListener("click", () => theme.toggle());
+  theme.onChange(() => {
+    labelToggle();
+    // Follow the page unless a palette was chosen on purpose.
+    if (state.palette === "chart" || state.palette === "ink") {
+      state.palette = base();
+      globe.setPalette(PALETTES[state.palette].colors);
+      for (const b of paletteHost.querySelectorAll("button")) {
+        b.setAttribute("aria-pressed", String(b.dataset.palette === state.palette));
+      }
+      renderCode();
+    }
+  });
+
+  if (!reduced) {
+    gsap.from(".section-title, .section-lede, .playground-controls", {
+      y: 16, opacity: 0, duration: 0.9, ease: "power3.out", stagger: 0.08,
+    });
+    gsap.from("#orrery", { opacity: 0, scale: 0.97, duration: 1.2, ease: "power3.out" });
+  }
 
   // Exposed so the headless visual checks can drive the demo.
   window.__globe = globe;
+  document.body.dataset.ready = "1";
 })();
 </script>
 </body>

@@ -31,6 +31,10 @@ const SLOTS = {
   gsap: "/*__GSAP__*/",
   library: "/*__TERRELLA__*/",
   world: "/*__WORLD__*/",
+  demoData: "/*__DEMO_DATA__*/",
+  demoTheme: "/*__DEMO_THEME__*/",
+  libraryCss: "/*__TERRELLA_CSS__*/",
+  demoCss: "/*__DEMO_CSS__*/",
 };
 
 try {
@@ -62,17 +66,21 @@ try {
   );
 
   const template = readFileSync(join(root, "demo/preview.template.html"), "utf8");
-  const css = readFileSync(join(root, "src/terrella.css"), "utf8");
 
   const parts = {
     gsap: [
       readFileSync(join(root, "node_modules/gsap/dist/gsap.min.js"), "utf8"),
       readFileSync(join(root, "node_modules/gsap/dist/ScrollTrigger.min.js"), "utf8"),
+      readFileSync(join(root, "node_modules/gsap/dist/ScrollSmoother.min.js"), "utf8"),
     ].join("\n"),
     library: readFileSync(bundle, "utf8"),
     // A JS literal, not JSON on disk: fetch() cannot read a sibling file when
     // the page is opened from the filesystem.
     world: `window.__WORLD__ = ${readFileSync(join(root, "data/countries-110m.json"), "utf8")};`,
+    demoData: readFileSync(join(root, "demo/demo-data.js"), "utf8"),
+    demoTheme: readFileSync(join(root, "demo/demo-theme.js"), "utf8"),
+    libraryCss: readFileSync(join(root, "src/terrella.css"), "utf8"),
+    demoCss: readFileSync(join(root, "demo/demo.css"), "utf8"),
   };
 
   let output = template;
@@ -84,8 +92,6 @@ try {
     // bundle is not treated as a substitution pattern.
     output = output.replace(slot, () => parts[name]);
   }
-
-  output = output.replace("/*__TERRELLA_CSS__*/", () => css);
 
   const target = join(root, "preview.html");
   writeFileSync(target, output);
