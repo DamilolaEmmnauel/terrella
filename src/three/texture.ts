@@ -2,6 +2,10 @@ import { geoEquirectangular, geoPath, type GeoPermissibleObjects } from "d3-geo"
 import type { Frame, Palette } from "../types";
 import type { PreparedStyle } from "../styles";
 import type { CountryFeature } from "../types";
+import { paintHover, paintMarkers } from "../overlay";
+import { paintLabels, type LabelState } from "../labels";
+import { paintTerminator } from "../terminator";
+import type { Marker, TerminatorOptions } from "../types";
 
 /**
  * Turning a 2D style into the sphere's texture.
@@ -29,6 +33,12 @@ export interface MapTextureOptions {
   palette: Palette;
   /** Texture width in pixels. Height is always half of it. */
   size?: number;
+  /** Id of the country under the pointer, painted over the style. */
+  hovered?: string | null;
+  /** Names to paint into the map. Marker names sit beside the marker's spot. */
+  labels?: LabelState | null;
+  markers?: Marker[];
+  terminator?: TerminatorOptions | null;
 }
 
 /**
@@ -43,6 +53,23 @@ export interface MapTexture {
   canvas: HTMLCanvasElement;
   /** Redraws in place, for a palette or region change. */
   update: (next: Partial<MapTextureOptions>) => void;
+}
+
+/**
+ * A context that records nothing.
+ *
+ * `paintMarkers` both draws and reports positions; on the texture only the
+ * positions are wanted, so the drawing calls are sent nowhere.
+ */
+function measureOnly(ctx: CanvasRenderingContext2D): CanvasRenderingContext2D {
+  const noop = () => {};
+  return new Proxy(ctx, {
+    get(target, key) {
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? noop : value;
+    },
+    set: () => true,
+  });
 }
 
 /** Draws a style into an equirectangular canvas, ready to wrap onto a sphere. */
@@ -93,9 +120,21 @@ export function createMapTexture(options: MapTextureOptions): MapTexture {
       // style gets a stable time rather than a jittering one.
       time: 0,
       flat: true,
+      hovered: current.hovered ?? null,
     };
 
     current.style.paint(frame);
+    if (current.terminator) paintTerminator(frame, current.terminator);
+    paintHover(frame);
+
+    if (current.labels) {
+      // The markers themselves are meshes on the sphere, so they are not drawn
+      // here; their positions are projected only to place the names.
+      const positions = current.markers
+        ? paintMarkers({ ...frame, ctx: measureOnly(ctx) }, current.markers, 0)
+        : [];
+      paintLabels(frame, current.labels, current.markers ?? [], positions);
+    }
   }
 
   draw();

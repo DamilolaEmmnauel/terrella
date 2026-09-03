@@ -8,8 +8,20 @@ import {
 } from "d3-geo";
 import { feature, merge } from "topojson-client";
 import type { Topology, GeometryCollection } from "topojson-specification";
-import type { CountryFeature, LngLat, Palette, ProjectionName, Region } from "./types";
+import type {
+  ColorScale,
+  CountryFeature,
+  CountryValues,
+  LngLat,
+  Palette,
+  ProjectionName,
+  Region,
+} from "./types";
 import { createLandTest, type LandTest } from "./landmask";
+import { isoKey } from "./countries";
+import { ramp } from "./color";
+
+export { isoKey };
 
 /**
  * The geographic parts: identifiers, projections, and turning a topology into
@@ -18,13 +30,6 @@ import { createLandTest, type LandTest } from "./landmask";
  * These are the details that make a globe annoying to build from scratch, so
  * they are isolated here where they can be tested without a canvas.
  */
-
-/**
- * ISO 3166-1 numeric ids arrive as 4, "4" or "004" depending on where the
- * caller got them. The world atlas uses "004", so everything is normalised to
- * the zero-padded form before comparison.
- */
-export const isoKey = (id: string | number): string => String(id).padStart(3, "0");
 
 const PROJECTIONS: Record<ProjectionName, () => GeoProjection> = {
   orthographic: geoOrthographic,
@@ -72,8 +77,11 @@ export function readWorld(world: Topology): WorldShapes {
     features: Array<{ id?: string | number }>;
   };
 
+  // Padded directly rather than through isoKey: the atlas keys a few shapes
+  // that have no ISO code (Kosovo, Somaliland) as "-99", and those must still
+  // be drawn even though nothing can name them.
   const countries: CountryFeature[] = collection.features.map((f) => ({
-    id: isoKey(f.id ?? ""),
+    id: String(f.id ?? "").padStart(3, "0"),
     feature: f as unknown as GeoPermissibleObjects,
   }));
 
@@ -112,6 +120,38 @@ export function regionColors(regions: Region[], palette: Palette): Map<string, s
     }
   }
 
+  return colors;
+}
+
+/**
+ * Colours countries by value.
+ *
+ * Values win over region colours, so a choropleth can sit inside a region
+ * outline: the region says which countries matter, the values say how much.
+ */
+export function valueColors(
+  values: CountryValues | null | undefined,
+  scale: ColorScale | undefined,
+  palette: Palette,
+): Map<string, string> {
+  const colors = new Map<string, string>();
+  if (!values) return colors;
+
+  const entries = Object.entries(values).filter(([, v]) => Number.isFinite(v));
+  if (entries.length === 0) return colors;
+
+  let toColor: (value: number) => string;
+  if (typeof scale === "function") {
+    toColor = scale;
+  } else {
+    const numbers = entries.map(([, v]) => v);
+    const [low, high] = scale?.domain ?? [Math.min(...numbers), Math.max(...numbers)];
+    const stops = scale?.range ?? [palette.land, palette.highlight];
+    const span = high - low;
+    toColor = (value) => ramp(stops, span === 0 ? 1 : (value - low) / span);
+  }
+
+  for (const [id, value] of entries) colors.set(isoKey(id), toColor(value));
   return colors;
 }
 

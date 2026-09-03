@@ -3,16 +3,24 @@ import { WebGPURenderer } from "three/webgpu";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { resolveConfig, prefersReducedMotion } from "../config";
-import { readWorld, regionColors as buildRegionColors, regionCentre, isoKey } from "../geo";
+import { readWorld, regionColors as buildRegionColors, regionCentre, valueColors, isoKey } from "../geo";
 import { resolveStyle, type PreparedStyle } from "../styles";
 import { createMapTexture, type MapTexture } from "./texture";
 import { createGlobeScene, type GlobeScene } from "./scene";
 import { createMarkers, type MarkerField } from "./markers";
 import { createArcs, type ArcField } from "./arcs";
 import { createHover, type HoverHandle } from "./hover";
+import { createCountryTest, type CountryTest } from "../countrymask";
+import { createTween, runTour, viewFacing, type Tween, type View } from "../motion";
+import { resolveLabels } from "../labels";
+import { resolveTerminator } from "../terminator";
+import { renderSVG } from "../svg/index";
+import { createAccessibleList, makeKeyboardTurnable } from "../a11y";
+import { elementVars, resolvePalette, watchSystemTheme, type ThemeName } from "../theme";
 import type {
   GlobeInstance,
   GlobeOptions,
+  LngLat,
   Marker,
   Palette,
   StyleName,
@@ -20,6 +28,9 @@ import type {
 } from "../types";
 
 export * from "../types";
+export { setDefaultWorld, getDefaultWorld } from "../config";
+export { DARK_PALETTE, type ThemeName } from "../theme";
+export { isoKey, country, countryName, countriesIn, allCountries, REGION_NAMES } from "../countries";
 export { lngLatToVector3, greatCirclePoints } from "./coords";
 export { createMapTexture } from "./texture";
 
@@ -76,12 +87,11 @@ const RADIUS = 1;
 
 export async function createGlobe(
   element: HTMLElement,
-  options: ThreeGlobeOptions,
+  options: ThreeGlobeOptions = {},
 ): Promise<ThreeGlobeInstance> {
   if (!element) throw new Error("terrella/three: no element given");
-  if (!options?.world) throw new Error("terrella/three: `world` topojson is required");
 
-  const config = resolveConfig(options);
+  const config = resolveConfig(options ?? {});
   const still = config.respectReducedMotion && prefersReducedMotion();
 
   const { countries, land } = readWorld(config.world);
@@ -89,9 +99,27 @@ export async function createGlobe(
   const allMarkers = config.markers ?? [];
   const arcs = config.arcs ?? [];
 
-  let palette: Palette = config.palette;
-  let colors = buildRegionColors(allRegions, palette);
+  let theme: ThemeName = config.theme;
+  let palette: Palette = resolvePalette(theme, elementVars(element), options.palette);
   let markers: Marker[] = allMarkers;
+  let values = config.values ?? null;
+  let scale = config.scale;
+  let paintedRegions = allRegions;
+
+  function buildColors(): Map<string, string> {
+    return new Map([
+      ...buildRegionColors(paintedRegions, palette),
+      ...valueColors(values, scale, palette),
+    ]);
+  }
+  let colors = buildColors();
+
+  const hoverCountries =
+    config.hoverCountries ?? Boolean(config.onCountryHover || config.onCountryClick);
+  let countryAt: CountryTest | null = null;
+
+  let labels = resolveLabels(config.labels, countries, allRegions);
+  let terminator = resolveTerminator(config.terminator);
 
   // --- renderer -------------------------------------------------------------
 
@@ -115,6 +143,7 @@ export async function createGlobe(
 
   // --- content --------------------------------------------------------------
 
+  let currentStyle: StyleName | StylePainter = config.style;
   let style: PreparedStyle = resolveStyle(
     config.style as StyleName | StylePainter<never>,
     { land, countries, options: config },
@@ -127,6 +156,9 @@ export async function createGlobe(
     regionColors: colors,
     palette,
     size: options.textureSize,
+    labels,
+    markers,
+    terminator,
   });
 
   const globeScene: GlobeScene = createGlobeScene({
@@ -152,17 +184,30 @@ export async function createGlobe(
     element.style.position = "relative";
   }
 
-  const hover: HoverHandle | null = config.tooltips
-    ? createHover({
-        element,
-        canvas: renderer.domElement as HTMLCanvasElement,
-        camera,
-        globe: globeScene.globe,
-        locale: config.locale,
-        onHover: config.onMarkerHover,
-        onClick: config.onMarkerClick,
-      })
-    : null;
+  const hover: HoverHandle | null =
+    config.tooltips || hoverCountries
+      ? createHover({
+          element,
+          canvas: renderer.domElement as HTMLCanvasElement,
+          camera,
+          globe: globeScene.globe,
+          locale: config.locale,
+          onHover: config.onMarkerHover,
+          onClick: config.onMarkerClick,
+          countryAt: hoverCountries
+            ? (at) => (countryAt ??= createCountryTest(countries))(at)
+            : undefined,
+          onCountryHover: (c) => {
+            // The texture is redrawn on a change, not per frame: a redraw is
+            // a few milliseconds and the pointer changes country far less
+            // often than sixty times a second.
+            hoveredCountry = c?.id ?? null;
+            rebuildTexture();
+            config.onCountryHover?.(c);
+          },
+          onCountryClick: config.onCountryClick,
+        })
+      : null;
   hover?.setTargets(markerField.hitMesh, markers);
 
   // --- controls -------------------------------------------------------------
@@ -187,6 +232,18 @@ export async function createGlobe(
   let ambientSpin = still ? 0 : config.spin;
   let longitude = config.longitude;
   let running = true;
+  let hoveredCountry: string | null = null;
+  let tween: Tween | null = null;
+  const defaultDuration = still ? 0 : 900;
+
+  /** Tilt in degrees, kept alongside the group's rotation for tweening. */
+  let tilt = config.tilt;
+
+  // A hand on the globe beats a call: orbiting cancels a glide in progress.
+  controls.addEventListener("start", () => {
+    tween?.cancel();
+    tween = null;
+  });
 
   function layout(): void {
     const width = element.clientWidth || 1;
@@ -206,6 +263,13 @@ export async function createGlobe(
     // the camera, and this turns the world, so the two compose rather than
     // fight.
     if (ambientSpin !== 0) longitude += ambientSpin * dt;
+    if (tween) {
+      const view = tween.at(performance.now());
+      longitude = view.longitude;
+      tilt = view.tilt;
+      group.rotation.x = (tilt * Math.PI) / 180;
+      if (view.done) tween = null;
+    }
     group.rotation.y = (longitude * Math.PI) / 180;
 
     controls.update();
@@ -238,13 +302,92 @@ export async function createGlobe(
   }
 
   function rebuildTexture(): void {
-    map.update({ style, regionColors: colors, palette });
+    map.update({ style, regionColors: colors, palette, hovered: hoveredCountry, markers, labels, terminator });
     globeScene.refreshTexture();
   }
+
+  // The night side moves a quarter of a degree a minute; the texture is
+  // redrawn on that cadence rather than every frame.
+  const terminatorClock = terminator && !terminator.date
+    ? setInterval(rebuildTexture, 60_000)
+    : null;
+
+  /**
+   * The sphere turns to bring a view to the front, and the camera stays put.
+   * Turning the camera instead would drag the lighting round with it.
+   *
+   * The sphere's longitude runs the other way from the 2D projection's, and
+   * the camera sits at +z, which is what the -90 accounts for.
+   */
+  const sphereLongitude = (facing: number) => -facing - 90;
+
+  function moveTo(target: View, duration = defaultDuration): Promise<void> {
+    tween?.cancel();
+    ambientSpin = 0;
+    const to: View = { longitude: sphereLongitude(target.longitude), tilt: target.tilt };
+
+    if (duration <= 0 || !running) {
+      tween = null;
+      longitude = to.longitude;
+      tilt = to.tilt;
+      group.rotation.x = (tilt * Math.PI) / 180;
+      return Promise.resolve();
+    }
+    tween = createTween({ longitude, tilt }, to, performance.now(), duration);
+    return tween.finished;
+  }
+
+  function viewOf(target: LngLat | { longitude: number; tilt?: number }): View {
+    return Array.isArray(target)
+      ? viewFacing(target)
+      : { longitude: target.longitude, tilt: target.tilt ?? tilt };
+  }
+
+  let removeKeyboard: (() => void) | null = null;
+  let spoken: HTMLElement | null = null;
+  if (config.accessible ?? true) {
+    removeKeyboard = makeKeyboardTurnable({
+      canvas: renderer.domElement as HTMLCanvasElement,
+      onTurn(dLongitude, dTilt) {
+        tween?.cancel();
+        tween = null;
+        ambientSpin = 0;
+        longitude -= dLongitude;
+        tilt = Math.max(-90, Math.min(90, tilt + dTilt));
+        group.rotation.x = (tilt * Math.PI) / 180;
+      },
+      onHome() {
+        void moveTo({ longitude: -(config.longitude + 90), tilt: config.tilt });
+      },
+    });
+    spoken = createAccessibleList({
+      regions: allRegions,
+      markers: allMarkers,
+      onMarker(marker) {
+        void moveTo(viewFacing(marker.coords));
+        config.onMarkerClick?.(marker, new MouseEvent("click"));
+      },
+    });
+    element.appendChild(spoken);
+  }
+
+  let unwatchTheme: (() => void) | null = null;
+
+  function applyTheme(next: ThemeName): void {
+    theme = next;
+    palette = resolvePalette(theme, elementVars(element), options.palette);
+    colors = buildColors();
+    unwatchTheme?.();
+    unwatchTheme = theme === "auto" ? watchSystemTheme(() => applyTheme("auto")) : null;
+    rebuildTexture();
+    rebuildMarkers();
+  }
+  if (theme === "auto") unwatchTheme = watchSystemTheme(() => applyTheme("auto"));
 
   function rebuildMarkers(): void {
     markerField.dispose();
     markerField = createMarkers(group, markers, RADIUS, palette);
+    if (labels?.markers) rebuildTexture();
     // The hover handle holds the old mesh and the old marker list, and its
     // hovered index refers to a set that no longer exists.
     hover?.setTargets(markerField.hitMesh, markers);
@@ -252,7 +395,7 @@ export async function createGlobe(
 
   // --- public surface -------------------------------------------------------
 
-  return {
+  const instance: ThreeGlobeInstance = {
     scene,
     camera,
     renderer,
@@ -277,20 +420,24 @@ export async function createGlobe(
       return longitude;
     },
 
-    focus(regionId) {
+    focus(regionId, moveOptions) {
       if (regionId === null) {
-        colors = buildRegionColors(allRegions, palette);
+        tween?.cancel();
+        tween = null;
+        paintedRegions = allRegions;
+        colors = buildColors();
         markers = allMarkers;
         ambientSpin = still ? 0 : config.spin;
         rebuildTexture();
         rebuildMarkers();
-        return;
+        return Promise.resolve();
       }
 
       const region = allRegions.find((r) => r.id === regionId);
       if (!region) throw new Error(`terrella/three: no region with id "${regionId}"`);
 
-      colors = buildRegionColors([region], palette);
+      paintedRegions = [region];
+      colors = buildColors();
 
       const named = region.markers;
       const inRegion = new Set((region.countries ?? []).map(isoKey));
@@ -299,21 +446,55 @@ export async function createGlobe(
         : allMarkers.filter((m) => m.country !== undefined && inRegion.has(isoKey(m.country)));
       markers = picked.length > 0 ? picked : allMarkers;
 
-      const centre = regionCentre(region, countries);
-      if (centre) {
-        // The sphere turns to bring the region to the front, and the camera
-        // stays put. Turning the camera instead would drag the lighting round
-        // with it and the terminator would follow the viewer.
-        longitude = -centre.longitude - 90;
-        group.rotation.x = ((region.tilt ?? -centre.latitude) * Math.PI) / 180;
-      }
-
-      ambientSpin = 0;
       rebuildTexture();
       rebuildMarkers();
+
+      const centre = regionCentre(region, countries);
+      if (!centre) {
+        ambientSpin = 0;
+        return Promise.resolve();
+      }
+      return moveTo(
+        { longitude: centre.longitude, tilt: region.tilt ?? -centre.latitude },
+        moveOptions?.duration,
+      );
+    },
+
+    flyTo(target, moveOptions) {
+      return moveTo(viewOf(target), moveOptions?.duration);
+    },
+
+    tour(stops, tourOptions) {
+      return runTour(stops, tourOptions, {
+        focus: (id, o) => instance.focus(id, o),
+        flyTo: (at, o) => instance.flyTo(at, o),
+      });
+    },
+
+    setTheme(next) {
+      applyTheme(next);
+    },
+
+    toSVG(svgOptions) {
+      return renderSVG({
+        ...options,
+        world: config.world,
+        style: currentStyle,
+        palette,
+        theme: "light",
+        regions: paintedRegions,
+        markers,
+        values: values ?? undefined,
+        scale,
+        longitude: -(longitude + 90),
+        tilt,
+        hovered: hoveredCountry,
+        width: svgOptions?.width ?? element.clientWidth ?? 600,
+      });
     },
 
     setStyle(next) {
+      currentStyle = next;
       style = resolveStyle(next as StyleName | StylePainter<never>, {
         land,
         countries,
@@ -332,9 +513,26 @@ export async function createGlobe(
 
     setPalette(next) {
       palette = { ...palette, ...next };
-      colors = buildRegionColors(allRegions, palette);
+      colors = buildColors();
       rebuildTexture();
       rebuildMarkers();
+    },
+
+    setValues(next, nextScale) {
+      values = next;
+      if (nextScale) scale = nextScale;
+      colors = buildColors();
+      rebuildTexture();
+    },
+
+    setLabels(next) {
+      labels = resolveLabels(next, countries, allRegions);
+      rebuildTexture();
+    },
+
+    setTerminator(next) {
+      terminator = resolveTerminator(next);
+      rebuildTexture();
     },
 
     setSpin(degreesPerSecond) {
@@ -348,6 +546,11 @@ export async function createGlobe(
 
     destroy() {
       running = false;
+      tween?.cancel();
+      unwatchTheme?.();
+      removeKeyboard?.();
+      spoken?.remove();
+      if (terminatorClock) clearInterval(terminatorClock);
       renderer.setAnimationLoop(null);
       globalThis.removeEventListener?.("resize", onResize);
       observer?.disconnect();
@@ -361,6 +564,8 @@ export async function createGlobe(
       renderer.domElement.remove();
     },
   };
+
+  return instance;
 }
 
 export default createGlobe;

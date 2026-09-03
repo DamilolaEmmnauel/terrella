@@ -1,5 +1,6 @@
 import { geoDistance, geoInterpolate, type GeoProjection } from "d3-geo";
 import type { Arc, Frame, LngLat, Marker } from "./types";
+import { contrastWith } from "./color";
 
 /**
  * What is drawn on top of every style: markers and arcs.
@@ -76,6 +77,28 @@ export function paintMarkers(
   }
 
   return positions;
+}
+
+/**
+ * Paints the country under the pointer, over whatever the style drew.
+ *
+ * A separate pass rather than part of each style so a custom style gets
+ * hover for free, and so the hover colour is one palette entry rather than
+ * something every painter has to agree on.
+ */
+export function paintHover(frame: Frame): void {
+  const { ctx, countries, palette, path, hovered } = frame;
+  if (!hovered) return;
+  const country = countries.find((c) => c.id === hovered);
+  if (!country) return;
+
+  ctx.beginPath();
+  path(country.feature);
+  ctx.fillStyle = palette.hover ?? contrastWith(palette.land, palette.ocean, 0.22);
+  ctx.fill();
+  ctx.strokeStyle = palette.border;
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
 }
 
 /**

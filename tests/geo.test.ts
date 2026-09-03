@@ -189,3 +189,29 @@ describe("sampleLandGrid", () => {
     expect(performance.now() - started).toBeLessThan(500);
   });
 });
+
+describe("valueColors", async () => {
+  const { valueColors } = await import("../src/geo");
+
+  it("colours each country by where its value sits in the domain", () => {
+    const colors = valueColors({ NG: 0, KE: 10 }, { range: ["#000000", "#ffffff"] }, DEFAULT_PALETTE);
+    expect(colors.get("566")).toBe("rgb(0, 0, 0)");
+    expect(colors.get("404")).toBe("rgb(255, 255, 255)");
+  });
+
+  it("defaults the ramp to land through highlight, and the domain to the data", () => {
+    const colors = valueColors({ 566: 5, 404: 5 }, undefined, DEFAULT_PALETTE);
+    // A flat domain paints everything at the top of the ramp.
+    expect(colors.get("566")).toBe(colors.get("404"));
+  });
+
+  it("accepts a function scale and ignores non-numbers", () => {
+    const colors = valueColors({ NG: 3, KE: NaN }, (v) => (v > 2 ? "red" : "blue"), DEFAULT_PALETTE);
+    expect(colors.get("566")).toBe("red");
+    expect(colors.has("404")).toBe(false);
+  });
+
+  it("is empty without values", () => {
+    expect(valueColors(null, undefined, DEFAULT_PALETTE).size).toBe(0);
+  });
+});

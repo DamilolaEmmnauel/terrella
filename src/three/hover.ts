@@ -1,7 +1,8 @@
 import { Raycaster, Vector2, Vector3, Matrix4, type Camera, type Mesh, type Object3D } from "three";
 import type { InstancedMesh } from "three";
 import { renderTooltip } from "../interaction";
-import type { Marker } from "../types";
+import type { Country, Marker } from "../types";
+import { country as lookupCountry } from "../countries";
 
 /**
  * Hovering a marker in 3D.
@@ -29,6 +30,10 @@ export interface HoverOptions {
   locale?: string;
   onHover?: (marker: Marker | null) => void;
   onClick?: (marker: Marker, event: MouseEvent) => void;
+  /** Names the country at a coordinate. Enables country hover when given. */
+  countryAt?: (at: [number, number]) => string | null;
+  onCountryHover?: (country: Country | null) => void;
+  onCountryClick?: (country: Country, event: MouseEvent) => void;
 }
 
 export interface HoverHandle {
@@ -37,6 +42,8 @@ export interface HoverHandle {
   /** Call once per frame: the globe turns, so the tooltip has to follow. */
   update: () => void;
   readonly hovered: Marker | null;
+  /** Id of the country under the pointer, or null. */
+  readonly hoveredCountry: string | null;
   dispose: () => void;
 }
 
@@ -55,6 +62,8 @@ export function createHover(options: HoverOptions): HoverHandle {
   let hitMesh: InstancedMesh | null = null;
   let markers: Marker[] = [];
   let hoveredIndex = -1;
+  let hoveredCountry: string | null = null;
+  let pointerCss: [number, number] = [0, 0];
   // Null when the pointer has left the canvas, so a stale position cannot keep
   // a tooltip alive after the cursor is gone.
   let pointerInside = false;
@@ -88,9 +97,39 @@ export function createHover(options: HoverOptions): HoverHandle {
     return target.applyMatrix4(hitMesh.matrixWorld);
   }
 
+  /**
+   * The sphere's UV unwrap runs linearly in longitude and latitude, in the
+   * same convention `lngLatToVector3` uses, so a hit's uv is a coordinate.
+   */
+  function countryAtUv(uv: { x: number; y: number } | undefined): string | null {
+    if (!uv || !options.countryAt) return null;
+    return options.countryAt([uv.x * 360 - 180, uv.y * 180 - 90]);
+  }
+
+  function setHoveredCountry(id: string | null): void {
+    const resolved: Country | null = id ? lookupCountry(id) : null;
+    const next = resolved ? id : null;
+    if (hoveredCountry === next) return;
+    hoveredCountry = next;
+
+    if (hoveredIndex === -1) {
+      if (resolved) {
+        renderTooltip(tooltip, { name: resolved.name });
+        tooltip.classList.add("is-on");
+        tooltip.style.left = `${pointerCss[0]}px`;
+        tooltip.style.top = `${pointerCss[1]}px`;
+      } else {
+        tooltip.classList.remove("is-on");
+      }
+      canvas.style.cursor = resolved ? "pointer" : "";
+    }
+    options.onCountryHover?.(resolved);
+  }
+
   function pick(): void {
-    if (!hitMesh || !pointerInside || markers.length === 0) {
+    if (!pointerInside) {
       setHover(-1);
+      setHoveredCountry(null);
       return;
     }
 
@@ -98,16 +137,18 @@ export function createHover(options: HoverOptions): HoverHandle {
 
     // Both, in one query: nearest-first ordering is what decides whether a
     // marker is in front of the globe or behind it.
-    const targets: Object3D[] = [globe, hitMesh];
+    const targets: Object3D[] = hitMesh && markers.length > 0 ? [globe, hitMesh] : [globe];
     const hits = raycaster.intersectObjects(targets, false);
 
     const first = hits[0];
-    if (!first || first.object !== hitMesh || first.instanceId === undefined) {
-      setHover(-1);
+    if (first && first.object === hitMesh && first.instanceId !== undefined) {
+      setHover(first.instanceId);
+      setHoveredCountry(null);
       return;
     }
 
-    setHover(first.instanceId);
+    setHover(-1);
+    setHoveredCountry(first && first.object === globe ? countryAtUv(first.uv) : null);
   }
 
   function positionTooltip(): void {
@@ -127,10 +168,15 @@ export function createHover(options: HoverOptions): HoverHandle {
 
   const onPointerMove = (event: PointerEvent) => {
     const rect = canvas.getBoundingClientRect();
-    pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-    pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    pointerCss = [event.clientX - rect.left, event.clientY - rect.top];
+    pointer.x = (pointerCss[0] / rect.width) * 2 - 1;
+    pointer.y = -(pointerCss[1] / rect.height) * 2 + 1;
     pointerInside = true;
     pick();
+    if (hoveredCountry && hoveredIndex === -1) {
+      tooltip.style.left = `${pointerCss[0]}px`;
+      tooltip.style.top = `${pointerCss[1]}px`;
+    }
   };
 
   const onPointerLeave = () => {
@@ -140,7 +186,12 @@ export function createHover(options: HoverOptions): HoverHandle {
 
   const onClick = (event: MouseEvent) => {
     const marker = hoveredIndex === -1 ? null : markers[hoveredIndex];
-    if (marker) options.onClick?.(marker, event);
+    if (marker) {
+      options.onClick?.(marker, event);
+      return;
+    }
+    const resolved = hoveredCountry ? lookupCountry(hoveredCountry) : null;
+    if (resolved) options.onCountryClick?.(resolved, event);
   };
 
   canvas.addEventListener("pointermove", onPointerMove);
@@ -150,6 +201,10 @@ export function createHover(options: HoverOptions): HoverHandle {
   return {
     get hovered() {
       return hoveredIndex === -1 ? null : (markers[hoveredIndex] ?? null);
+    },
+
+    get hoveredCountry() {
+      return hoveredCountry;
     },
 
     setTargets(nextMesh, nextMarkers) {

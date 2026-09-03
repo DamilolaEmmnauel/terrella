@@ -1,3 +1,4 @@
+import type { Topology } from "topojson-specification";
 import type { GlobeOptions, Palette } from "./types";
 
 /**
@@ -28,6 +29,7 @@ export const DEFAULT_PALETTE: Palette = {
 export const DEFAULTS: GlobeDefaults = {
   style: "solid",
   projection: "orthographic",
+  theme: "light",
   spin: 3.2,
   tilt: -14,
   longitude: 18,
@@ -45,6 +47,7 @@ export const DEFAULTS: GlobeDefaults = {
 export interface GlobeDefaults {
   style: NonNullable<GlobeOptions["style"]>;
   projection: NonNullable<GlobeOptions["projection"]>;
+  theme: NonNullable<GlobeOptions["theme"]>;
   spin: number;
   tilt: number;
   longitude: number;
@@ -59,18 +62,43 @@ export interface GlobeDefaults {
 }
 
 /** Everything resolved: no optional fields left for the renderers to guess at. */
-export type ResolvedConfig = Omit<GlobeOptions, "palette" | "style" | "projection"> &
-  GlobeDefaults & { palette: Palette };
+export type ResolvedConfig = Omit<GlobeOptions, "palette" | "style" | "projection" | "world"> &
+  GlobeDefaults & { palette: Palette; world: Topology };
+
+/**
+ * The atlas used when a caller passes none.
+ *
+ * Registered rather than imported so the core stays 7 KB: the browser build
+ * and `terrella/world` register the bundled atlas, and an app that loads its
+ * own can register that once instead of passing it to every globe.
+ */
+let defaultWorld: Topology | null = null;
+
+export function setDefaultWorld(world: Topology | null): void {
+  defaultWorld = world;
+}
+
+export function getDefaultWorld(): Topology | null {
+  return defaultWorld;
+}
 
 export function resolveConfig(options: GlobeOptions): ResolvedConfig {
+  const world = options.world ?? defaultWorld;
+  if (!world) {
+    throw new Error(
+      'terrella: no `world` given. Pass a TopoJSON atlas, or `import { world } from "terrella/world"` and call `setDefaultWorld(world)` once.',
+    );
+  }
   return {
     ...DEFAULTS,
     ...options,
+    world,
     // Spread after the merge: a caller passing two palette colours should keep
     // the other seven rather than lose them.
     palette: { ...DEFAULT_PALETTE, ...options.palette },
     style: options.style ?? DEFAULTS.style,
     projection: options.projection ?? DEFAULTS.projection,
+    theme: options.theme ?? DEFAULTS.theme,
   } as ResolvedConfig;
 }
 

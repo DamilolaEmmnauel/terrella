@@ -2,6 +2,10 @@ import type { Frame, PrepareContext, StyleName, StylePainter } from "../types";
 import { solid } from "./solid";
 import { dots } from "./dots";
 import { wireframe } from "./wireframe";
+import { hatched } from "./hatched";
+import { pixel } from "./pixel";
+import { ascii } from "./ascii";
+import { stipple } from "./stipple";
 
 /**
  * The style registry.
@@ -37,6 +41,10 @@ const STYLE_ENTRIES: Record<StyleName, StyleEntry> = {
   solid: (context) => prepare(solid, context),
   dots: (context) => prepare(dots, context),
   wireframe: (context) => prepare(wireframe, context),
+  hatched: (context) => prepare(hatched, context),
+  pixel: (context) => prepare(pixel, context),
+  ascii: (context) => prepare(ascii, context),
+  stipple: (context) => prepare(stipple, context),
 };
 
 /** Every built-in style name, for building a picker. */
@@ -60,4 +68,4 @@ export function resolveStyle<State>(
   return entry(context);
 }
 
-export { solid, dots, wireframe };
+export { solid, dots, wireframe, hatched, pixel, ascii, stipple };

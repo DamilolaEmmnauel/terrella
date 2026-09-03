@@ -1,7 +1,9 @@
 # terrella
 
 An interactive globe for the web. Highlight countries and regions, place
-markers, and choose how it looks.
+markers, draw arcs, colour countries by number, and choose how it looks. One
+API, three outputs: a small 2D canvas, a real sphere with WebGPU, and static
+SVG from a server.
 
 A terrella is a small model of the Earth. William Gilbert built one in 1600 to
 study magnetism, which is roughly what this is.
@@ -17,57 +19,168 @@ npm install terrella
 
 ```js
 import { createGlobe } from "terrella";
-import world from "world-atlas/countries-110m.json";
+import { world } from "terrella/world";
 
 const globe = createGlobe(document.querySelector("#globe"), {
   world,
-  regions: [
-    { id: "sea", name: "Southeast Asia", countries: [608, 360, 704] },
-  ],
-  markers: [
-    { name: "Manila", coords: [121.0, 14.6], country: 608, timezone: "Asia/Manila" },
-  ],
+  regions: [{ id: "sea", name: "Southeast Asia", countries: ["PH", "ID", "VN"] }],
+  markers: [{ name: "Manila", coords: [121.0, 14.6], timezone: "Asia/Manila" }],
+  onCountryClick: (country) => console.log(country.name),
 });
 
 globe.focus("sea");
 ```
 
-Drag to spin, flick to throw, hover a marker for its local time.
+Drag to spin, flick to throw, hover a marker for its local time, hover a
+country for its name, arrow keys to turn.
 
 ## Why this exists
 
-Most lightweight globe libraries do markers and arcs but cannot highlight
-countries. The ones that can are built on three.js and cost hundreds of
-kilobytes. terrella is the middle: country and region highlighting on a 2D
-canvas, with d3-geo doing the projection maths.
+Most lightweight globe libraries do markers and arcs but cannot highlight a
+country. The ones that can are built on three.js and cost hundreds of
+kilobytes. terrella is the middle: countries, regions, choropleths and labels
+on a 2D canvas with d3-geo doing the projection maths, and the same options
+on a sphere when you want one.
 
 The fiddly parts are the same in every hand-rolled globe, and they are what
 this actually solves:
 
-- Which country ids the atlas uses, and the fact that yours are probably not
-  padded the same way.
-- Hiding markers once they pass the horizon, because an orthographic
-  projection happily projects the far side of the world onto the near side.
-- Making a drag feel like a throw rather than a jump.
+- Country ids. The atlas uses ISO numeric codes; you have "NG". Both work.
+- Markers that hide as they pass the horizon, because an orthographic
+  projection happily draws the far side onto the near side.
+- A drag that feels like a throw rather than a jump, and a camera that
+  glides rather than cuts.
 - Not animating at all when someone has asked their machine to stop moving.
-- Aiming the camera at a region without working the angle out by hand.
+- A globe that reads on a dark page as well as a light one.
+
+## Sizes
+
+| Build | Gzipped |
+| --- | --- |
+| `terrella` (ESM, d3-geo external) | 20 KB |
+| `terrella/world` (the bundled atlas) | 39 KB |
+| `terrella/three` | three.js is a peer dependency, on top |
+| `dist/terrella.global.js` (everything, one script tag) | 70 KB |
+
+## Naming countries
+
+Anywhere a country is named, use an ISO 3166-1 numeric code (4, "4" or
+"004"), an alpha-2 code ("NG") or an alpha-3 code ("NGA"). Case does not
+matter. Whole continents and UN sub-regions come from `countriesIn`:
+
+```js
+import { countriesIn, country, countryName } from "terrella";
+
+countriesIn("Africa");                 // 60 numeric ids
+countriesIn("South-eastern Asia");
+country("NG");                         // { id: "566", alpha2: "NG", name: "Nigeria", region: "Africa", ... }
+countryName(566);                      // "Nigeria"
+```
+
+## The atlas
+
+Pass any TopoJSON with a `countries` object, or use the bundled one
+(world-atlas countries-110m, 39 KB gzipped):
+
+```js
+import { world } from "terrella/world";
+createGlobe(el, { world });
+
+// or once, for every globe afterwards
+import "terrella/world/register";
+createGlobe(el, { regions });
+```
+
+The browser build registers it for you, so a page with one script tag needs
+nothing else.
+
+## Regions and countries
+
+```js
+regions: [
+  {
+    id: "africa",
+    name: "Africa",
+    countries: countriesIn("Africa"),
+    highlight: ["NG", "KE", "ZA"],   // painted in the highlight colour
+    color: "#a9cdec",                // optional, else the palette's region colour
+  },
+]
+```
+
+`focus("africa")` glides the camera to the region's centroid and shows only
+that region. `focus(null)` releases it. Countries under the pointer are
+reported and lit:
+
+```js
+createGlobe(el, {
+  world,
+  hoverCountries: true,                  // implied by either callback
+  onCountryHover: (country) => ...,      // null when the pointer leaves land
+  onCountryClick: (country, event) => ...,
+});
+```
+
+## Values
+
+A number per country becomes a choropleth. The default ramp runs from the
+land colour to the highlight; give a `scale` for anything else.
+
+```js
+createGlobe(el, {
+  world,
+  values: { NG: 213, ET: 120, EG: 109, CD: 99 },
+  scale: { range: ["#edf4fb", "#1769a8"] },     // or (value) => colour
+});
+
+globe.setValues({ NG: 220 });
+```
+
+## Markers, arcs, labels
+
+```js
+markers: [{ name: "Manila", coords: [121, 14.6], timezone: "Asia/Manila", color, size }],
+arcs: [{ from: [3.4, 6.5], to: [-46.6, -23.5] }],
+labels: true,   // or { markers: true, countries: "regions" | "all" | ["NG", "KE"] }
+```
+
+Labels sit at each country's centroid, hide past the horizon, fade toward
+the limb, and are drawn with a halo so they read on any palette.
+
+## The camera
+
+```js
+await globe.focus("sea");                     // glides over 900 ms
+await globe.focus("sea", { duration: 0 });    // jumps
+await globe.flyTo([121, 14.6]);               // face a coordinate
+await globe.flyTo({ longitude: 20, tilt: -10 });
+
+const tour = globe.tour(
+  [{ region: "africa" }, { at: [121, 14.6] }, { region: "latam", dwell: 4000 }],
+  { dwell: 2500, loop: true },
+);
+tour.stop();
+```
+
+Dragging cancels a glide in progress. Under reduced motion every move is a
+cut.
 
 ## Styles
 
-Three built in. Pass `style` at construction or call `setStyle` later.
+Seven built in. Pass `style` at construction or call `setStyle` later.
 
 | Style | What it draws |
 | --- | --- |
 | `solid` | Flat country fills with hairline seams. The default. |
 | `dots` | Land as a field of dots, fading toward the limb. |
 | `wireframe` | Coastlines over a graticule. |
+| `hatched` | Diagonal rules clipped to the land: the engraved map. |
+| `pixel` | Blocks on a coarse grid. |
+| `ascii` | Characters, solid at the centre and dissolving at the limb. |
+| `stipple` | Jittered dots of varying weight: the engraver's hand. |
 
-```js
-globe.setStyle("dots");
-```
-
-Write your own by passing an object instead of a name. `prepare` runs once and
-whatever it returns is handed to every `paint`:
+Write your own by passing an object. `prepare` runs once and whatever it
+returns is handed to every `paint`:
 
 ```js
 globe.setStyle({
@@ -82,203 +195,169 @@ globe.setStyle({
 });
 ```
 
+A style written once works in every output: the 2D canvas, the sphere's
+texture, and the SVG renderer.
+
+## Colour and theme
+
+Nine colours, any subset. Three layers, each overriding the last: a theme
+preset, `--terrella-*` custom properties on the element, and `palette`.
+
+```js
+createGlobe(el, { world, theme: "auto" });   // follows the system, live
+globe.setTheme("dark");
+globe.setPalette({ highlight: "#d9481b" });
+```
+
+```css
+#globe { --terrella-land: #d3d0c5; --terrella-highlight: #d9481b; }
+```
+
+Palette keys: `ocean`, `land`, `border`, `region`, `highlight`, `marker`,
+`markerRing`, `rim`, `arc`, and optionally `dot`, `outline`, `hover`, `label`.
+
+## Day and night
+
+```js
+createGlobe(el, { world, terminator: true });
+createGlobe(el, { world, terminator: { date: new Date("2026-06-21T12:00Z"), opacity: 0.4 } });
+```
+
+The night side follows the real sun and moves once a minute.
+
 ## Projections
 
-`orthographic` (a globe, the default), `equirectangular` and `naturalEarth`
-(flat maps). Everything else works the same in all three.
+```js
+globe.setProjection("naturalEarth");   // "orthographic" | "naturalEarth" | "equirectangular"
+```
+
+## Three renderers, one API
 
 ```js
-globe.setProjection("naturalEarth");
+import { createGlobe } from "terrella";          // 2D canvas
+import { createGlobe } from "terrella/three";    // a sphere: WebGPU, WebGL2 elsewhere
+import { renderSVG } from "terrella/svg";        // a string, anywhere
 ```
 
-## Regions
+The three.js renderer takes the same options plus `atmosphere`,
+`atmosphereColor`, `background`, `zoom` and `textureSize`, and returns the
+same instance plus `scene`, `camera`, `renderer` and `controls`. Every style
+is drawn into an equirectangular texture by the same painters, so a style
+written for one works on the other. It cannot change projection: a sphere is
+the projection.
 
-A region is a group of ISO 3166-1 numeric country ids treated as one thing.
-Ids can be numbers or strings, padded or not.
+`renderSVG` needs no browser:
 
 ```js
-{
-  id: "africa",
-  name: "Africa",
-  countries: [566, 404, 710, 818],
-  highlight: [566],          // a subset, painted in highlightColor
-  color: "#a9cdec",
-  highlightColor: "#2ea6f5",
-}
+const svg = renderSVG({ world, regions, markers, labels: true, longitude: 20, width: 800 });
 ```
 
-`focus(id)` parks that region facing the viewer and stops the drift. If the
-region has no `longitude`, the camera aims at the centroid of its countries,
-computed as a vector average so a region spanning the antimeridian does not end
-up centred on the Atlantic. `focus(null)` releases it.
+Every live instance also has `toSVG()`, which renders exactly what is on
+screen.
 
-## Colours
+## React
 
-Every colour is in one palette object, and any subset can be overridden.
+```jsx
+import { Globe } from "terrella/react";
+import { world } from "terrella/world";
 
-```js
-globe.setPalette({ ocean: "#f1f4f7", land: "#c6ced8", highlight: "#3c5570" });
+<Globe world={world} regions={regions} markers={markers} globeStyle="dots" focus="sea" />
 ```
 
-Two entries are derived rather than required. A colour that reads well as a
-filled continent disappears as scattered dots, so the `dots` style pushes
-`land` away from `ocean` unless you set `dot` yourself, and `wireframe` does
-the same for its coastline unless you set `outline`. The direction follows the
-background's luminance, so this works on a dark palette too.
+Every option is a prop; the render style is `globeStyle` because `style` is
+CSS in React. Props with a setter change the globe in place, the rest rebuild
+it. For server rendering, pass the SVG as `fallback` and the canvas replaces
+it on mount:
 
-## API
-
-```ts
-createGlobe(element, options) => GlobeInstance
+```jsx
+<Globe world={world} regions={regions} fallback={renderSVG({ world, regions })} />
 ```
 
-| Option | Default | |
-| --- | --- | --- |
-| `world` | required | TopoJSON with a `countries` object |
-| `style` | `"solid"` | Name or your own painter |
-| `projection` | `"orthographic"` | |
-| `regions` | `[]` | |
-| `markers` | `[]` | |
-| `arcs` | `[]` | Great-circle lines between two points |
-| `palette` | see above | Any subset |
-| `spin` | `3.2` | Degrees per second; 0 holds still |
-| `tilt` | `-14` | Degrees of axial tilt |
-| `longitude` | `18` | Starting longitude at the centre |
-| `ratio` | `1` | Canvas height as a multiple of its width |
-| `radius` | `0.46` | Sphere radius as a fraction of width |
-| `draggable` | `true` | |
-| `tooltips` | `true` | |
-| `pulseMs` | `1600` | Marker pulse period; 0 disables |
-| `respectReducedMotion` | `true` | Draw one still frame instead of animating |
-| `dotSpacing` | `2.2` | Degrees between dots in the `dots` style |
-| `dotSize` | `1.1` | Dot radius in pixels |
-| `label` | derived | Overrides the canvas aria-label |
-| `locale` | browser | For marker clock formatting |
-| `onMarkerHover` | | `(marker \| null) => void` |
-| `onMarkerClick` | | `(marker, event) => void` |
+## HTML element
 
-The instance exposes `focus`, `setStyle`, `setProjection`, `setPalette`,
-`setSpin`, `setMarkers`, `longitude`, `canvas` and `destroy`.
+For pages with no build step, or tools where an element is the only thing you
+can write:
 
-## 3D
+```html
+<script src="https://unpkg.com/terrella/dist/terrella.global.js"></script>
 
-A second entry point renders the same globe on a real sphere. three.js is an
-optional peer dependency, so the 2D build stays 7KB for the pages that only
-want that.
+<terrella-globe
+  style-name="dots" theme="auto" labels terminator
+  regions='[{ "id": "sea", "countries": ["PH", "ID", "VN"] }]'
+  markers='[{ "name": "Manila", "coords": [121, 14.6] }]'
+></terrella-globe>
 
-```sh
-npm install terrella three
+<script>
+  document.querySelector("terrella-globe")
+    .addEventListener("terrella:countryclick", (e) => console.log(e.detail.name));
+</script>
 ```
 
-```js
-import { createGlobe } from "terrella/three";
-
-const globe = await createGlobe(element, { world, regions, markers, arcs });
-```
-
-![The globe on a sphere in a dark palette, with Southeast Asia highlighted and a great-circle arc](docs/screenshot-three.png)
-
-It is async because `WebGPURenderer` needs `await renderer.init()`. The
-renderer picks WebGPU where the browser has it and falls back to WebGL2
-everywhere else, from one codebase; `globe.usingWebGL` reports which it got.
-Both paths are verified rendering.
-
-The API is otherwise the same, and that is not a coincidence: **both renderers
-drive the same style painters.** The 2D one paints to the visible canvas, and
-the 3D one paints the identical thing into an equirectangular texture and wraps
-it around the sphere. So `solid`, `dots`, `wireframe` and any style you write
-yourself all work in 3D the day they are written, and the two renderers cannot
-drift apart in how they draw a country.
-
-`setProjection` is the one exception. It throws, because a sphere is the
-projection; use the 2D renderer for flat maps.
-
-| Extra option | Default | |
-| --- | --- | --- |
-| `background` | transparent | Colour behind the globe |
-| `atmosphere` | `1` | Rim strength; 0 removes it |
-| `atmosphereColor` | `#4db2ff` | |
-| `lit` | `false` | Shade with a light instead of showing the map flat |
-| `zoom` | `false` | Wheel zoom |
-| `textureSize` | `2048` | Texture width; height is half |
-| `forceWebGL` | `false` | Force the fallback backend, to reproduce a bug |
-
-Markers hover in 3D as they do in 2D: the same tooltip, the same local clock,
-the same `onMarkerHover` and `onMarkerClick` callbacks.
-
-The part worth knowing is occlusion. A raycast against the markers alone
-happily hits one on the far side of the planet, so the cursor picks up a city
-that is behind the globe and the tooltip appears over empty ocean. The sphere
-is therefore included in the raycast and a marker only counts when nothing is
-in front of it. Verified in a browser: every near-side marker is hoverable and
-none of the far-side ones leak through.
-
-Markers are also a few pixels across, so hit-testing uses a larger invisible
-copy of them. Invisible objects are still raycastable, because three tests
-`object.layers` and never `object.visible`.
-
-The instance also exposes `scene`, `camera`, `renderer` and `controls`, so
-anything three.js can do to a scene you can still do.
-
-Markers are one `InstancedMesh`, so a hundred of them is one draw call rather
-than a hundred. Arcs are tubes following a great circle, because WebGL ignores
-line width on most platforms and geometry is the only way to control it. The
-demo scene runs in 6 draw calls and about 18,000 triangles.
-
-Two notes on how it is shaded, both of which were wrong first. The map is
-darkened toward the limb, and that shading rather than the atmosphere is what
-makes it read as a sphere: a flat diagrammatic texture has no shading of its
-own, so without it the silhouette is the only depth cue and the result looks
-like a sticker. And the atmosphere's alpha falls to zero **at** the shell's
-silhouette rather than peaking there, or it draws a hard outline exactly where
-it stops existing.
-
-## Data
-
-Any TopoJSON with a `countries` object works. `world-atlas`'s `countries-110m`
-is the usual one, and a copy is in `data/` so the demo runs without a network.
-
-## From a CDN
-
-`dist/terrella.global.js` bundles d3-geo and topojson-client into one file that
-defines `window.terrella`, so a plain HTML page needs no build step. The `npm`
-build keeps them external so an app already using d3 does not ship it twice.
+Arrays are JSON in attributes or properties set from a script. Events:
+`terrella:markerhover`, `terrella:markerclick`, `terrella:countryhover`,
+`terrella:countryclick`. The instance is on `.globe`.
 
 ## Accessibility
 
-The canvas carries `role="img"` and a generated label naming the regions.
-`prefers-reduced-motion` draws a single still frame and disables dragging.
-Nothing here is keyboard-operable yet, which is the main gap.
+On by default. The canvas takes focus and the arrow keys turn it (shift for
+bigger steps, Home to reset). A visually hidden block lists every region's
+countries and gives every marker a button that turns the globe to it. Set
+`accessible: false` if the page describes the globe itself.
 
-## Performance
+## Instance
 
-The land dots need to know which grid points are on land. Doing that with
-`geoContains` took 2.4 seconds at the default spacing and 65 seconds at a tight
-one, all on the main thread. The land is instead rasterised once into a small
-offscreen bitmap, after which each test is one array read: the same work is now
-about 6ms. Total dots are capped at 40,000, because past that it stops reading
-as a globe and starts costing frames.
+| Call | What it does |
+| --- | --- |
+| `focus(id, { duration })` | Glide to a region and hold. `null` releases. |
+| `flyTo(coords \| { longitude, tilt }, { duration })` | Face a point and hold. |
+| `tour(stops, { dwell, loop })` | Visit stops in turn. Returns `{ stop, finished }`. |
+| `setStyle(style)` | A name, or your own painter. |
+| `setProjection(name)` | 2D only. |
+| `setPalette(colors)` | Merge new colours in. |
+| `setTheme(theme)` | Swap the preset and re-read CSS custom properties. |
+| `setMarkers(list)` | Replace the markers. |
+| `setValues(values, scale)` | Replace the choropleth. `null` clears. |
+| `setLabels(options)` | Switch labels on, off, or change them. |
+| `setTerminator(options)` | Switch the night side on, off, or move it. |
+| `setSpin(degreesPerSecond)` | Ambient rotation. Zero holds still. |
+| `longitude` | The longitude at the centre now. |
+| `toSVG({ width })` | What is on screen, as SVG. |
+| `destroy()` | Stop the loop and remove everything. |
 
-Countries are drawn from one merged land shape rather than 177 separate fills,
-and only the countries belonging to a region are painted individually.
+## Options
 
-## Known gaps
+| Option | Default | |
+| --- | --- | --- |
+| `world` | the registered default | TopoJSON with a `countries` object |
+| `style` | `"solid"` | |
+| `projection` | `"orthographic"` | |
+| `theme` | `"light"` | `"light"`, `"dark"`, `"auto"` |
+| `palette` | | any subset of the nine colours |
+| `regions`, `markers`, `arcs`, `values`, `scale` | | see above |
+| `labels`, `terminator` | off | |
+| `hoverCountries` | on when a country callback is given | |
+| `spin` | `3.2` | degrees per second |
+| `tilt`, `longitude` | `-14`, `18` | the starting view |
+| `ratio` | `1` | canvas height as a multiple of width |
+| `radius` | `0.46` | sphere radius as a fraction of width |
+| `draggable`, `tooltips`, `accessible` | on | |
+| `pulseMs` | `1600` | marker pulse period; 0 disables |
+| `respectReducedMotion` | on | |
+| `dotSpacing`, `dotSize` | `2.2`, `1.1` | for the sampled styles |
+| `label`, `locale` | | aria-label override; clock locale |
+| `onMarkerHover`, `onMarkerClick`, `onCountryHover`, `onCountryClick` | | |
 
-- No keyboard control.
-- Antarctica can overflow the ocean shape slightly in flat projections.
-- Zoom is not implemented; the sphere is a fixed size.
-- No satellite or topographic texture support yet. The sphere is drawn from the
-  vector map, which is the point, but a photographic option would be useful.
+## Data
+
+`data/countries-110m.json` is world-atlas 110m (Natural Earth, public
+domain). `data/iso3166.csv` is the ISO 3166-1 table with UN M49 regions;
+`npm run iso3166` regenerates `src/data/iso3166.ts` from it.
 
 ## Seeing it without installing anything
 
 `preview.html` at the repo root is a single self-contained file: open it in a
-browser and it runs, with no server, no build and no network. It carries both
-renderers, the world atlas and its own styles inline, because a page opened
-from the filesystem cannot `fetch` a sibling file or load ES modules.
-
-It shows the hero globe in 3D, four live specimens of the styles, and a
-workbench with every control wired to a real call.
+browser and it runs, with no server, no build and no network. One globe is
+pinned on the page and each step of the copy drives it with a real call.
 
 It is generated. Edit `demo/preview.template.html` and run:
 
@@ -286,8 +365,11 @@ It is generated. Edit `demo/preview.template.html` and run:
 npm run preview
 ```
 
-The two pages under `demo/` are the development versions and do need a build
-and a local server.
+The page chrome lives in `demo/demo.css` and the regions, markers and palettes
+in `demo/demo-data.js`; both are inlined by the build and shared with the two
+development pages under `demo/`, which do need a build and a local server.
+Fonts are the one thing fetched from the network; offline, the page falls back
+to the system fonts and everything else still works.
 
 ## Development
 
@@ -295,10 +377,12 @@ and a local server.
 npm install
 npm test          # vitest
 npm run typecheck
+npm run lint
 npm run build
 npm run demo      # then open http://localhost:8080/demo/
 ```
 
 ## Licence
 
-MIT.
+MIT. Country data is public domain (Natural Earth) and CC BY-SA 4.0 (the ISO
+table's regional codes).

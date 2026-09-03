@@ -101,6 +101,34 @@ export function lighten(color: string, amount: number): string {
   });
 }
 
+/** Blends two colours: 0 gives `a`, 1 gives `b`. Unparseable input returns `a`. */
+export function mix(a: string, b: string, t: number): string {
+  const from = parseColor(a);
+  const to = parseColor(b);
+  if (!from || !to) return a;
+  const k = Math.max(0, Math.min(1, t));
+  return toCss({
+    r: from.r + (to.r - from.r) * k,
+    g: from.g + (to.g - from.g) * k,
+    b: from.b + (to.b - from.b) * k,
+    a: from.a + (to.a - from.a) * k,
+  });
+}
+
+/**
+ * Reads a colour off a ramp of two or more stops at `t` in 0 to 1.
+ *
+ * Piecewise linear, which is what a legend implies: the middle stop of a
+ * three-colour ramp sits exactly at the middle value.
+ */
+export function ramp(stops: readonly string[], t: number): string {
+  if (stops.length === 0) return "#000000";
+  if (stops.length === 1) return stops[0] ?? "#000000";
+  const k = Math.max(0, Math.min(1, t)) * (stops.length - 1);
+  const index = Math.min(stops.length - 2, Math.floor(k));
+  return mix(stops[index] ?? "#000000", stops[index + 1] ?? "#000000", k - index);
+}
+
 /**
  * Pushes a colour away from its background so small marks stay legible.
  *

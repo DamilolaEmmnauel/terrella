@@ -137,10 +137,10 @@ export function localTime(timezone?: string, locale?: string): string | null {
   }
 }
 
-/** Fills the tooltip for a marker. */
+/** Fills the tooltip for a marker, or anything else with a name. */
 export function renderTooltip(
   tooltip: HTMLElement,
-  marker: Marker,
+  subject: Pick<Marker, "name" | "timezone">,
   locale?: string,
 ): void {
   // textContent, not innerHTML: marker names are caller data, and this library
@@ -148,10 +148,10 @@ export function renderTooltip(
   tooltip.textContent = "";
 
   const name = document.createElement("b");
-  name.textContent = marker.name;
+  name.textContent = subject.name;
   tooltip.appendChild(name);
 
-  const time = localTime(marker.timezone, locale);
+  const time = localTime(subject.timezone, locale);
   if (time) {
     const clock = document.createElement("span");
     clock.className = "terrella__time";

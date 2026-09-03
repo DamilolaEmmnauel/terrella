@@ -57,3 +57,21 @@ describe("contrastWith", () => {
     expect(Math.abs(luminance(adjusted) - luminance(background))).toBeGreaterThan(0.2);
   });
 });
+
+describe("mix and ramp", async () => {
+  const { mix, ramp } = await import("../src/color");
+
+  it("blends two colours linearly", () => {
+    expect(mix("#000000", "#ffffff", 0)).toBe("rgb(0, 0, 0)");
+    expect(mix("#000000", "#ffffff", 1)).toBe("rgb(255, 255, 255)");
+    expect(mix("#000000", "#ffffff", 0.5)).toBe("rgb(128, 128, 128)");
+  });
+
+  it("reads a multi-stop ramp piecewise", () => {
+    const stops = ["#000000", "#ff0000", "#ffffff"];
+    // The middle stop sits exactly at the middle value.
+    expect(ramp(stops, 0.5)).toBe("rgb(255, 0, 0)");
+    expect(ramp(stops, 0.25)).toBe("rgb(128, 0, 0)");
+    expect(ramp(stops, 2)).toBe("rgb(255, 255, 255)");
+  });
+});

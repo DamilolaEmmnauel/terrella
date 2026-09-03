@@ -10,7 +10,7 @@ import tsparser from "@typescript-eslint/parser";
 export default [
   js.configs.recommended,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       parser: tsparser,
       parserOptions: { project: "./tsconfig.json" },
@@ -19,7 +19,10 @@ export default [
     rules: {
       ...tseslint.configs.recommended.rules,
       "@typescript-eslint/no-explicit-any": "error",
-      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "no-console": "error",
       // TypeScript already resolves every identifier against the DOM and Node
       // lib types, and eslint does not read those, so no-undef only produces
@@ -28,5 +31,6 @@ export default [
       "no-undef": "off",
     },
   },
-  { ignores: ["dist/**", "node_modules/**", "demo/**", "data/**"] },
+  // src/data is generated from data/*.csv by scripts/; lint the generator, not its output.
+  { ignores: ["dist/**", "node_modules/**", "demo/**", "data/**", "src/data/**"] },
 ];
