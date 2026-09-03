@@ -27,7 +27,12 @@
       <a href="#api">API</a>
       <a href="https://github.com/DamilolaEmmnauel/terrella">GitHub</a>
       <a href="https://www.npmjs.com/package/terrella">npm</a>
-      <button class="theme-toggle" type="button" id="theme-toggle">Dark</button>
+<button class="theme-switch" type="button" id="theme-toggle" role="switch" aria-checked="false" aria-label="Dark mode">
+        <span class="knob" aria-hidden="true">
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </span>
+      </button>
     </nav>
   </div>
 </header>
@@ -59,7 +64,7 @@
         <div class="install">
           <span class="prompt" aria-hidden="true">$</span>
           <code id="install-command">npm install terrella</code>
-          <button type="button" id="copy-install" aria-label="Copy install command">copy</button>
+          <button class="copy-button" type="button" id="copy-install" aria-label="Copy install command"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
         </div>
         <ul class="hero-meta">
           <li>MIT</li>
@@ -220,6 +225,7 @@ const globe = await createGlobe(el, {
 
     <div class="code-pair">
       <div role="tabpanel" id="panel-vanilla" aria-labelledby="tab-vanilla">
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>import { createGlobe, countriesIn } from <span class="s">"terrella"</span>;
 import { world } from <span class="s">"terrella/world"</span>;
 
@@ -236,6 +242,7 @@ const globe = createGlobe(el, {
 await globe.focus(<span class="s">"africa"</span>);</pre>
       </div>
       <div role="tabpanel" id="panel-react" aria-labelledby="tab-react" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>import { Globe } from <span class="s">"terrella/react"</span>;
 import { world } from <span class="s">"terrella/world"</span>;
 
@@ -249,6 +256,7 @@ import { world } from <span class="s">"terrella/world"</span>;
 /&gt;</pre>
       </div>
       <div role="tabpanel" id="panel-html" aria-labelledby="tab-html" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>&lt;script src=<span class="s">"https://unpkg.com/terrella/dist/terrella.global.js"</span>&gt;&lt;/script&gt;
 
 &lt;terrella-globe
@@ -258,6 +266,7 @@ import { world } from <span class="s">"terrella/world"</span>;
 &gt;&lt;/terrella-globe&gt;</pre>
       </div>
       <div role="tabpanel" id="panel-server" aria-labelledby="tab-server" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre><span class="c">// no browser, no canvas: a string</span>
 import { renderSVG } from <span class="s">"terrella/svg"</span>;
 
@@ -318,7 +327,8 @@ const svg = renderSVG({
   const $ = (selector) => document.querySelector(selector);
 
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
-  const fade = (target, vars) => gsap.to(target, { ...vars, duration: reduced ? 0 : vars.duration });
+  const fade = (target, vars) =>
+    gsap.to(target, { ...vars, duration: reduced ? 0 : vars.duration, overwrite: "auto" });
 
   /* --- scrolling ------------------------------------------------------- *
    * The wheel is smoothed so the globe's changes arrive as a glide rather
@@ -444,33 +454,38 @@ const svg = renderSVG({
     fade(ring, { opacity: next.projection === "orthographic" ? 1 : 0, duration: 0.4 });
   }
 
+  /*
+   * One place decides which step is current. Each step's trigger only
+   * reports that it has come into its band; the fade is a single tween over
+   * every step that overwrites whatever was still running, so a fast scroll
+   * back up cannot leave an older fade-out finishing after the fade-in.
+   */
   const steps = document.querySelectorAll(".step");
+  let activeStep = null;
+  function activate(step) {
+    if (activeStep === step) return;
+    activeStep = step;
+    apply(step.dataset.step);
+    fade(steps, { opacity: (index, element) => (element === step ? 1 : 0.32), duration: 0.3, ease: "power2.out" });
+  }
   steps.forEach((step) => {
     ScrollTrigger.create({
       trigger: step,
-      start: "top 60%",
-      end: "bottom 40%",
+      start: "top 62%",
+      end: "bottom 38%",
       onToggle: (self) => {
-        if (!self.isActive) return;
-        apply(step.dataset.step);
-        steps.forEach((other) => fade(other, { opacity: other === step ? 1 : 0.3, duration: 0.4 }));
+        if (self.isActive) activate(step);
       },
     });
   });
   apply("plain");
+  // Fonts and globes settle after the first layout; trigger positions must follow.
+  addEventListener("load", () => ScrollTrigger.refresh());
 
   /* --- theme ----------------------------------------------------------- */
 
-  const toggle = $("#theme-toggle");
-  function labelToggle() {
-    const other = theme.current() === "dark" ? "Light" : "Dark";
-    toggle.textContent = other;
-    toggle.setAttribute("aria-label", `Switch to ${other.toLowerCase()} mode`);
-  }
-  labelToggle();
-  toggle.addEventListener("click", () => theme.toggle());
+  theme.bindSwitch($("#theme-toggle"));
   theme.onChange(() => {
-    labelToggle();
     buildStates();
     apply(current.step);
     if (sphere) sphere.setPalette({ ...base().colors, ...base().sphere });
@@ -497,22 +512,24 @@ const svg = renderSVG({
     });
   }
 
-  /* --- copy install ---------------------------------------------------- */
+  /* --- copy buttons ---------------------------------------------------- */
 
-  $("#copy-install").addEventListener("click", async (event) => {
-    const button = event.currentTarget;
-    try {
-      await navigator.clipboard.writeText($("#install-command").textContent);
-    } catch {
-      return;
-    }
-    button.textContent = "copied";
-    button.classList.add("is-copied");
-    setTimeout(() => {
-      button.textContent = "copy";
-      button.classList.remove("is-copied");
-    }, 1600);
-  });
+  function wireCopy(button, read) {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(read());
+      } catch {
+        return;
+      }
+      button.classList.add("is-copied");
+      if (!reduced) gsap.fromTo(button, { scale: 0.85 }, { scale: 1, duration: 0.3, ease: "back.out(3)" });
+      setTimeout(() => button.classList.remove("is-copied"), 1600);
+    });
+  }
+  wireCopy($("#copy-install"), () => $("#install-command").textContent);
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    wireCopy(button, () => button.parentElement.querySelector("pre").textContent);
+  }
 
   document.body.dataset.ready = "1";
 })();

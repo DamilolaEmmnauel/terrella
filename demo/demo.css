@@ -123,18 +123,60 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .site-nav a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 .site-nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
-/* The theme switch sits in the nav and dresses like a link. */
-.theme-toggle {
+/* The theme switch: a track with a knob that carries the sun or the moon. */
+.theme-switch {
+  position: relative;
+  align-self: center;
+  width: 48px;
+  height: 26px;
   padding: 0;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: none;
-  font: 500 14px/1 var(--sans);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.theme-switch:hover { background: var(--paper-deep); }
+.theme-switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.theme-switch[aria-checked="true"] .knob { transform: translateX(22px); }
+.theme-switch svg { position: absolute; width: 12px; height: 12px; transition: opacity 0.2s ease, transform 0.25s ease; }
+.theme-switch .moon { opacity: 0; transform: rotate(-40deg); }
+.theme-switch[aria-checked="true"] .sun { opacity: 0; transform: rotate(40deg); }
+.theme-switch[aria-checked="true"] .moon { opacity: 1; transform: none; }
+
+/* Copy buttons: an icon that becomes a tick for a moment. */
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
   color: var(--ink-2);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
-.theme-toggle:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.copy-button:hover { border-color: var(--ink); color: var(--ink); }
+.copy-button svg { width: 15px; height: 15px; }
+.copy-button .check { display: none; }
+.copy-button.is-copied { border-color: var(--accent); color: var(--accent); }
+.copy-button.is-copied .copy { display: none; }
+.copy-button.is-copied .check { display: block; }
 
 /* --- the story: steps on the left, one globe pinned on the right ------- */
 
@@ -220,25 +262,14 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 
 .install {
   display: inline-flex;
-  align-items: baseline;
-  gap: 18px;
+  align-items: center;
+  gap: 16px;
   margin-top: 36px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--ink);
   font: 15px/1 var(--mono);
 }
 .install .prompt { color: var(--ink-3); user-select: none; }
-.install button {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: 500 13px/1 var(--sans);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.install button:hover { color: var(--ink); }
-.install button.is-copied { color: var(--accent); }
 
 .hero-meta {
   display: flex;
@@ -389,7 +420,9 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .code-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
 .code-pair { margin-top: 28px; }
+.code-pair [role="tabpanel"] { position: relative; }
 .code-pair [role="tabpanel"][hidden] { display: none; }
+.code-pair .copy-button { position: absolute; top: 0; right: 0; }
 .code-pair pre {
   padding-left: 18px;
   border-left: 1px solid var(--ink);

@@ -196,18 +196,60 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .site-nav a:hover { color: var(--ink); border-bottom-color: var(--ink); }
 .site-nav a[aria-current="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
-/* The theme switch sits in the nav and dresses like a link. */
-.theme-toggle {
+/* The theme switch: a track with a knob that carries the sun or the moon. */
+.theme-switch {
+  position: relative;
+  align-self: center;
+  width: 48px;
+  height: 26px;
   padding: 0;
-  border: 0;
-  border-bottom: 1px solid transparent;
-  background: none;
-  font: 500 14px/1 var(--sans);
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.theme-switch:hover { background: var(--paper-deep); }
+.theme-switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--paper);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.theme-switch[aria-checked="true"] .knob { transform: translateX(22px); }
+.theme-switch svg { position: absolute; width: 12px; height: 12px; transition: opacity 0.2s ease, transform 0.25s ease; }
+.theme-switch .moon { opacity: 0; transform: rotate(-40deg); }
+.theme-switch[aria-checked="true"] .sun { opacity: 0; transform: rotate(40deg); }
+.theme-switch[aria-checked="true"] .moon { opacity: 1; transform: none; }
+
+/* Copy buttons: an icon that becomes a tick for a moment. */
+.copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  background: var(--paper);
   color: var(--ink-2);
   cursor: pointer;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
 }
-.theme-toggle:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.copy-button:hover { border-color: var(--ink); color: var(--ink); }
+.copy-button svg { width: 15px; height: 15px; }
+.copy-button .check { display: none; }
+.copy-button.is-copied { border-color: var(--accent); color: var(--accent); }
+.copy-button.is-copied .copy { display: none; }
+.copy-button.is-copied .check { display: block; }
 
 /* --- the story: steps on the left, one globe pinned on the right ------- */
 
@@ -293,25 +335,14 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 
 .install {
   display: inline-flex;
-  align-items: baseline;
-  gap: 18px;
+  align-items: center;
+  gap: 16px;
   margin-top: 36px;
   padding-bottom: 10px;
   border-bottom: 1px solid var(--ink);
   font: 15px/1 var(--mono);
 }
 .install .prompt { color: var(--ink-3); user-select: none; }
-.install button {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: 500 13px/1 var(--sans);
-  color: var(--ink-2);
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-.install button:hover { color: var(--ink); }
-.install button.is-copied { color: var(--accent); }
 
 .hero-meta {
   display: flex;
@@ -462,7 +493,9 @@ code, pre, kbd { font-family: var(--mono); font-feature-settings: "calt" 0; }
 .code-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); }
 
 .code-pair { margin-top: 28px; }
+.code-pair [role="tabpanel"] { position: relative; }
 .code-pair [role="tabpanel"][hidden] { display: none; }
+.code-pair .copy-button { position: absolute; top: 0; right: 0; }
 .code-pair pre {
   padding-left: 18px;
   border-left: 1px solid var(--ink);
@@ -645,10 +678,21 @@ window.TERRELLA_THEME = (() => {
     if (!stored()) notify();
   });
 
+  /**
+   * Wires a `role="switch"` button: click toggles, and aria-checked follows
+   * the theme wherever the change came from.
+   */
+  function bindSwitch(element) {
+    const reflect = () => element.setAttribute("aria-checked", String(current() === "dark"));
+    reflect();
+    element.addEventListener("click", toggle);
+    onChange(reflect);
+  }
+
   const choice = stored();
   if (choice) root.dataset.theme = choice;
 
-  return { current, set, toggle, onChange };
+  return { current, set, toggle, onChange, bindSwitch };
 })();
 </script>
 </head>
@@ -663,7 +707,12 @@ window.TERRELLA_THEME = (() => {
       <a href="#api">API</a>
       <a href="https://github.com/DamilolaEmmnauel/terrella">GitHub</a>
       <a href="https://www.npmjs.com/package/terrella">npm</a>
-      <button class="theme-toggle" type="button" id="theme-toggle">Dark</button>
+<button class="theme-switch" type="button" id="theme-toggle" role="switch" aria-checked="false" aria-label="Dark mode">
+        <span class="knob" aria-hidden="true">
+          <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </span>
+      </button>
     </nav>
   </div>
 </header>
@@ -695,7 +744,7 @@ window.TERRELLA_THEME = (() => {
         <div class="install">
           <span class="prompt" aria-hidden="true">$</span>
           <code id="install-command">npm install terrella</code>
-          <button type="button" id="copy-install" aria-label="Copy install command">copy</button>
+          <button class="copy-button" type="button" id="copy-install" aria-label="Copy install command"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
         </div>
         <ul class="hero-meta">
           <li>MIT</li>
@@ -856,6 +905,7 @@ const globe = await createGlobe(el, {
 
     <div class="code-pair">
       <div role="tabpanel" id="panel-vanilla" aria-labelledby="tab-vanilla">
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>import { createGlobe, countriesIn } from <span class="s">"terrella"</span>;
 import { world } from <span class="s">"terrella/world"</span>;
 
@@ -872,6 +922,7 @@ const globe = createGlobe(el, {
 await globe.focus(<span class="s">"africa"</span>);</pre>
       </div>
       <div role="tabpanel" id="panel-react" aria-labelledby="tab-react" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>import { Globe } from <span class="s">"terrella/react"</span>;
 import { world } from <span class="s">"terrella/world"</span>;
 
@@ -885,6 +936,7 @@ import { world } from <span class="s">"terrella/world"</span>;
 /&gt;</pre>
       </div>
       <div role="tabpanel" id="panel-html" aria-labelledby="tab-html" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre>&lt;script src=<span class="s">"https://unpkg.com/terrella/dist/terrella.global.js"</span>&gt;&lt;/script&gt;
 
 &lt;terrella-globe
@@ -894,6 +946,7 @@ import { world } from <span class="s">"terrella/world"</span>;
 &gt;&lt;/terrella-globe&gt;</pre>
       </div>
       <div role="tabpanel" id="panel-server" aria-labelledby="tab-server" hidden>
+        <button class="copy-button" type="button" data-copy aria-label="Copy code"><svg class="copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
 <pre><span class="c">// no browser, no canvas: a string</span>
 import { renderSVG } from <span class="s">"terrella/svg"</span>;
 
@@ -5387,7 +5440,8 @@ three/build/three.tsl.js:
   const $ = (selector) => document.querySelector(selector);
 
   gsap.registerPlugin(ScrollTrigger, ScrollSmoother);
-  const fade = (target, vars) => gsap.to(target, { ...vars, duration: reduced ? 0 : vars.duration });
+  const fade = (target, vars) =>
+    gsap.to(target, { ...vars, duration: reduced ? 0 : vars.duration, overwrite: "auto" });
 
   /* --- scrolling ------------------------------------------------------- *
    * The wheel is smoothed so the globe's changes arrive as a glide rather
@@ -5513,33 +5567,38 @@ three/build/three.tsl.js:
     fade(ring, { opacity: next.projection === "orthographic" ? 1 : 0, duration: 0.4 });
   }
 
+  /*
+   * One place decides which step is current. Each step's trigger only
+   * reports that it has come into its band; the fade is a single tween over
+   * every step that overwrites whatever was still running, so a fast scroll
+   * back up cannot leave an older fade-out finishing after the fade-in.
+   */
   const steps = document.querySelectorAll(".step");
+  let activeStep = null;
+  function activate(step) {
+    if (activeStep === step) return;
+    activeStep = step;
+    apply(step.dataset.step);
+    fade(steps, { opacity: (index, element) => (element === step ? 1 : 0.32), duration: 0.3, ease: "power2.out" });
+  }
   steps.forEach((step) => {
     ScrollTrigger.create({
       trigger: step,
-      start: "top 60%",
-      end: "bottom 40%",
+      start: "top 62%",
+      end: "bottom 38%",
       onToggle: (self) => {
-        if (!self.isActive) return;
-        apply(step.dataset.step);
-        steps.forEach((other) => fade(other, { opacity: other === step ? 1 : 0.3, duration: 0.4 }));
+        if (self.isActive) activate(step);
       },
     });
   });
   apply("plain");
+  // Fonts and globes settle after the first layout; trigger positions must follow.
+  addEventListener("load", () => ScrollTrigger.refresh());
 
   /* --- theme ----------------------------------------------------------- */
 
-  const toggle = $("#theme-toggle");
-  function labelToggle() {
-    const other = theme.current() === "dark" ? "Light" : "Dark";
-    toggle.textContent = other;
-    toggle.setAttribute("aria-label", `Switch to ${other.toLowerCase()} mode`);
-  }
-  labelToggle();
-  toggle.addEventListener("click", () => theme.toggle());
+  theme.bindSwitch($("#theme-toggle"));
   theme.onChange(() => {
-    labelToggle();
     buildStates();
     apply(current.step);
     if (sphere) sphere.setPalette({ ...base().colors, ...base().sphere });
@@ -5566,22 +5625,24 @@ three/build/three.tsl.js:
     });
   }
 
-  /* --- copy install ---------------------------------------------------- */
+  /* --- copy buttons ---------------------------------------------------- */
 
-  $("#copy-install").addEventListener("click", async (event) => {
-    const button = event.currentTarget;
-    try {
-      await navigator.clipboard.writeText($("#install-command").textContent);
-    } catch {
-      return;
-    }
-    button.textContent = "copied";
-    button.classList.add("is-copied");
-    setTimeout(() => {
-      button.textContent = "copy";
-      button.classList.remove("is-copied");
-    }, 1600);
-  });
+  function wireCopy(button, read) {
+    button.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(read());
+      } catch {
+        return;
+      }
+      button.classList.add("is-copied");
+      if (!reduced) gsap.fromTo(button, { scale: 0.85 }, { scale: 1, duration: 0.3, ease: "back.out(3)" });
+      setTimeout(() => button.classList.remove("is-copied"), 1600);
+    });
+  }
+  wireCopy($("#copy-install"), () => $("#install-command").textContent);
+  for (const button of document.querySelectorAll("[data-copy]")) {
+    wireCopy(button, () => button.parentElement.querySelector("pre").textContent);
+  }
 
   document.body.dataset.ready = "1";
 })();

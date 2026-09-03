@@ -54,8 +54,19 @@ window.TERRELLA_THEME = (() => {
     if (!stored()) notify();
   });
 
+  /**
+   * Wires a `role="switch"` button: click toggles, and aria-checked follows
+   * the theme wherever the change came from.
+   */
+  function bindSwitch(element) {
+    const reflect = () => element.setAttribute("aria-checked", String(current() === "dark"));
+    reflect();
+    element.addEventListener("click", toggle);
+    onChange(reflect);
+  }
+
   const choice = stored();
   if (choice) root.dataset.theme = choice;
 
-  return { current, set, toggle, onChange };
+  return { current, set, toggle, onChange, bindSwitch };
 })();
