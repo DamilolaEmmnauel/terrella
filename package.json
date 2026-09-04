@@ -105,7 +105,7 @@
     "type": "git",
     "url": "git+https://github.com/DamilolaEmmnauel/terrella.git"
   },
-  "homepage": "https://github.com/DamilolaEmmnauel/terrella#readme",
+  "homepage": "https://terrella.damilolaemmanuel.com",
   "engines": {
     "node": ">=18"
   },

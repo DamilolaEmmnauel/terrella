@@ -8,6 +8,8 @@ SVG from a server.
 A terrella is a small model of the Earth. William Gilbert built one in 1600 to
 study magnetism, which is roughly what this is.
 
+See it running at [terrella.damilolaemmanuel.com](https://terrella.damilolaemmanuel.com).
+
 <p align="center">
   <img src="docs/screenshot.png" alt="A globe with Africa highlighted and markers on Lagos, Nairobi and Johannesburg" width="45%">
   <img src="docs/screenshot-dots.png" alt="The same globe in the dotted style" width="45%">
