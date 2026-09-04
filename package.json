@@ -74,7 +74,9 @@
     "demo": "npm run build && python3 -m http.server 8080",
     "prepublishOnly": "npm run typecheck && npm run test && npm run build",
     "preview": "node scripts/build-preview.mjs",
-    "iso3166": "node scripts/build-iso3166.mjs"
+    "iso3166": "node scripts/build-iso3166.mjs",
+    "site": "npm run preview && rm -rf site && mkdir site && cp preview.html site/index.html && cp demo/_headers site/_headers",
+    "deploy": "npm run site && wrangler pages deploy site --project-name terrella --commit-dirty=true"
   },
   "dependencies": {
     "@types/topojson-specification": "^1.0.5",
